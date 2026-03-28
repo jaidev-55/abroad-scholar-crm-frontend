@@ -5,12 +5,8 @@ import { message } from "antd";
 import ForgotPasswordRightPanel from "../../components/auth/ForgotPasswordRightPanel";
 
 import { forgotPassword, resetPassword } from "../../api/auth";
-import type {
-  ForgotPasswordFormValues,
-  ForgotStep,
-  ResetPasswordFormValues,
-} from "../../components/auth/Forgotpasswordform";
-import ForgotPasswordForm from "../../components/auth/Forgotpasswordform";
+import type { ForgotPasswordFormValues, ForgotStep, ResetPasswordFormValues } from "../../types/auth";
+import ForgotPasswordForm from "../../components/auth/forgot-password/ForgotPasswordForm";
 
 const ForgotPasswordPage = () => {
   const [step, setStep] = useState<ForgotStep>("email");
