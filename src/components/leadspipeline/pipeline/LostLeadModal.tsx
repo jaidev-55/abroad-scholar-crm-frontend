@@ -93,28 +93,34 @@ const UserAvatar: React.FC<{ name: string; size?: number }> = ({
 };
 
 const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState(""); // ← drives button disabled state
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    if (!lead) return;
-
-    setReason("");
-    setNotes("");
-    setSaving(false);
-    setDone(false);
-  }, [lead?.id]);
-
   const {
     control,
     formState: { errors },
-  } = useForm({});
+    reset,
+  } = useForm<{ lostReason: string }>({
+    defaultValues: { lostReason: "" },
+  });
+
+  // Reset every time a new lead is opened
+  useEffect(() => {
+    if (!lead) return;
+    queueMicrotask(() => {
+      setReason("");
+      setNotes("");
+      setSaving(false);
+      setDone(false);
+      reset({ lostReason: "" });
+    });
+  }, [lead?.id, reset]);
 
   if (!lead) return null;
 
-  const priority = PRIORITY_CONFIG[lead.priority];
+  const priority = PRIORITY_CONFIG[lead.priority] ?? PRIORITY_CONFIG.Warm;
   const stage = STAGE_CONFIG[lead.stage] ?? {
     label: lead.stage,
     color: "#64748b",
@@ -123,7 +129,7 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
   };
 
   const handleConfirm = () => {
-    if (!reason) return;
+    if (!reason || saving) return;
     setSaving(true);
     setTimeout(() => {
       onSave(lead.id, reason, notes);
@@ -178,7 +184,6 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
                 </p>
               </div>
               <div className="flex flex-col gap-1.5 items-end shrink-0">
-                {/* Stage badge */}
                 <span
                   className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold border"
                   style={{
@@ -189,7 +194,6 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
                 >
                   {stage.label}
                 </span>
-                {/* Priority badge */}
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border"
                   style={{
@@ -216,6 +220,7 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
               </p>
             </div>
 
+            {/* ── Lost Reason select ── */}
             <CustomSelect
               name="lostReason"
               label="Lost Reason"
@@ -225,6 +230,7 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
               errors={errors}
               rules={{ required: "Lost reason is required" }}
               options={LOST_REASONS.map((r) => ({ value: r, label: r }))}
+              onChange={(v: string) => setReason(v ?? "")}
             />
 
             {/* Notes */}

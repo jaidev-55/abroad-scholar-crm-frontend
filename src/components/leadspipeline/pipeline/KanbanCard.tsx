@@ -25,7 +25,7 @@ import UserAvatar from "../../common/UserAvatar";
 const KanbanCard: React.FC<{
   lead: Lead;
   onMarkLost: (l: Lead) => void;
-  onMoveTo: (id: string, s: string) => void;
+  onMoveTo: (leadId: string, stageId: string) => void;
   onViewNotes: (l: Lead) => void;
   onView: (l: Lead) => void;
   onEdit: (l: Lead) => void;
@@ -89,7 +89,8 @@ const KanbanCard: React.FC<{
       danger: true,
     },
   ];
-  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+  const handleMenuClick: MenuProps["onClick"] = ({ key, domEvent }) => {
+    domEvent.stopPropagation(); // ← add this line
     if (key === "notes") onViewNotes(lead);
     if (key === "view") onView(lead);
     if (key === "edit") onEdit(lead);
@@ -101,6 +102,7 @@ const KanbanCard: React.FC<{
   return (
     <div
       ref={setNodeRef}
+      onClick={() => onView(lead)}
       className={`relative rounded-2xl p-4 transition-all duration-200 ${isDragging ? "bg-blue-50 border-2 border-dashed border-blue-400 shadow-xl" : "bg-white border border-slate-100 shadow-sm hover:shadow-md hover:shadow-blue-100/40 hover:border-blue-200"}`}
     >
       <div

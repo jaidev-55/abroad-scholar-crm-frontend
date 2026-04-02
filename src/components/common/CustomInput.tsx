@@ -18,6 +18,7 @@ interface FormInputProps<T extends FieldValues = FieldValues> {
   rules?: RegisterOptions<T>;
   size?: "small" | "middle" | "large";
   control?: Control<T>;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const CustomInput = <T extends FieldValues = FieldValues>({
@@ -29,6 +30,7 @@ const CustomInput = <T extends FieldValues = FieldValues>({
   rules,
   control,
   size = "middle",
+  onChange,
 }: FormInputProps<T>) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -36,7 +38,6 @@ const CustomInput = <T extends FieldValues = FieldValues>({
   return (
     <div className="flex flex-col gap-1.5 w-full">
       <label className="block text-xs font-semibold text-gray-800">
-        {" "}
         {label}
       </label>
       <Controller
@@ -52,6 +53,10 @@ const CustomInput = <T extends FieldValues = FieldValues>({
               placeholder={placeholder}
               size={size}
               status={error ? "error" : ""}
+              onChange={(e) => {
+                field.onChange(e);
+                onChange?.(e);
+              }}
               suffix={
                 isPassword && (
                   <span

@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { message, Spin } from "antd";
 import { useForm, Controller } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import {
   RiUserLine,
   RiFileTextLine,
@@ -18,15 +20,15 @@ import {
   RiAddLine,
   RiDeleteBinLine,
 } from "react-icons/ri";
+import type { Dayjs } from "dayjs";
 import type { Lead } from "../../types/lead.types";
 import CustomInput from "../common/CustomInput";
 import CustomSelect from "../common/CustomSelect";
 import CustomDatePicker from "../common/CustomDatePicker";
 import CustomModal from "../common/CustomModal";
+import { createLead } from "../../api/leads";
+import dayjs from "dayjs";
 
-// ─────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -45,36 +47,34 @@ interface FormValues {
   stage: string;
   priority: "Hot" | "Warm" | "Cold";
   counselor: string;
-  followUp: import("dayjs").Dayjs | null;
+  followUp: Dayjs | null;
   ieltsScore: string;
 }
 
-// ─────────────────────────────────────────────
-// OPTIONS
-// ─────────────────────────────────────────────
 const SOURCE_OPTIONS = [
-  "Website",
-  "Referral",
-  "Social Media",
-  "Walk-in",
-  "Email Campaign",
-  "Phone Inquiry",
-  "Education Fair",
-  "Agent",
-].map((s) => ({ value: s, label: s }));
+  "INSTAGRAM",
+  "WEBSITE",
+  "WALK_IN",
+  "GOOGLE_ADS",
+  "META_ADS",
+  "REFERRAL",
+].map((s) => ({
+  value: s,
+  label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+}));
 
 const COUNTRY_OPTIONS = [
-  "🇺🇸 USA",
-  "🇬🇧 UK",
-  "🇨🇦 Canada",
-  "🇦🇺 Australia",
-  "🇩🇪 Germany",
-  "🇫🇷 France",
-  "🇮🇪 Ireland",
-  "🇳🇿 New Zealand",
-  "🇸🇬 Singapore",
-  "🇯🇵 Japan",
-].map((c) => ({ value: c, label: c }));
+  { value: "USA", label: "🇺🇸 USA" },
+  { value: "UK", label: "🇬🇧 UK" },
+  { value: "Canada", label: "🇨🇦 Canada" },
+  { value: "Australia", label: "🇦🇺 Australia" },
+  { value: "Germany", label: "🇩🇪 Germany" },
+  { value: "France", label: "🇫🇷 France" },
+  { value: "Ireland", label: "🇮🇪 Ireland" },
+  { value: "New Zealand", label: "🇳🇿 New Zealand" },
+  { value: "Singapore", label: "🇸🇬 Singapore" },
+  { value: "Japan", label: "🇯🇵 Japan" },
+];
 
 const COUNSELOR_OPTIONS = [
   "Priya Sharma",
@@ -85,21 +85,53 @@ const COUNSELOR_OPTIONS = [
 ].map((c) => ({ value: c, label: c }));
 
 const STAGES = [
-  { id: "new", label: "New", color: "#3B82F6", bg: "#EFF6FF" },
-  { id: "progress", label: "In Progress", color: "#8B5CF6", bg: "#F5F3FF" },
-  { id: "applied", label: "Applied", color: "#F59E0B", bg: "#FFFBEB" },
-  { id: "converted", label: "Converted", color: "#10B981", bg: "#ECFDF5" },
-];
+  {
+    id: "new",
+    label: "New",
+    apiStatus: "NEW",
+    color: "#3B82F6",
+    bg: "#EFF6FF",
+  },
+  {
+    id: "progress",
+    label: "In Progress",
+    apiStatus: "IN_PROGRESS",
+    color: "#8B5CF6",
+    bg: "#F5F3FF",
+  },
+  {
+    id: "converted",
+    label: "Converted",
+    apiStatus: "CONVERTED",
+    color: "#10B981",
+    bg: "#ECFDF5",
+  },
+] as const;
 
 const PRIORITY_CONFIG = {
-  Hot: { icon: "🔥", color: "#ef4444", bg: "#fff5f5", border: "#fed7d7" },
-  Warm: { icon: "⚡", color: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
-  Cold: { icon: "❄️", color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe" },
-};
+  Hot: {
+    icon: "🔥",
+    color: "#ef4444",
+    bg: "#fff5f5",
+    border: "#fed7d7",
+    apiValue: "HOT",
+  },
+  Warm: {
+    icon: "⚡",
+    color: "#f59e0b",
+    bg: "#fffbeb",
+    border: "#fde68a",
+    apiValue: "WARM",
+  },
+  Cold: {
+    icon: "❄️",
+    color: "#3b82f6",
+    bg: "#eff6ff",
+    border: "#bfdbfe",
+    apiValue: "COLD",
+  },
+} as const;
 
-// ─────────────────────────────────────────────
-// STEP INDICATOR
-// ─────────────────────────────────────────────
 const StepIndicator: React.FC<{ current: StepKey }> = ({ current }) => {
   const steps = [
     {
@@ -159,9 +191,6 @@ const StepIndicator: React.FC<{ current: StepKey }> = ({ current }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// REVIEW ROW
-// ─────────────────────────────────────────────
 const ReviewRow: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -182,9 +211,6 @@ const ReviewRow: React.FC<{
   </div>
 );
 
-// ─────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────
 const LeadModal: React.FC<Props> = ({
   open,
   onClose,
@@ -217,7 +243,9 @@ const LeadModal: React.FC<Props> = ({
     },
   });
 
-  React.useEffect(() => {
+  const { mutate, isPending } = useMutation({ mutationFn: createLead });
+
+  useEffect(() => {
     if (open) {
       setStep(1);
       setNotes([]);
@@ -263,35 +291,70 @@ const LeadModal: React.FC<Props> = ({
   };
 
   const onSubmit = (data: FormValues) => {
-    const now = new Date().toISOString();
-    const newLead: Lead = {
-      id: `lead-${Date.now()}`,
-      name: data.name.trim(),
-      phone: data.phone.trim(),
-      email: data.email?.trim() ?? "",
-      country: data.country,
-      source: data.source,
-      stage: data.stage,
-      priority: data.priority,
-      counselor: data.counselor,
-      followUp: data.followUp
-        ? data.followUp.format("YYYY-MM-DD")
-        : new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
-      ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
-      notes: notes.map((text, i) => ({
-        id: `note-${Date.now()}-${i}`,
-        text,
-        createdAt: now,
-        author: data.counselor || "Admin",
-      })),
-      createdAt: now.split("T")[0],
-    };
-    onSave(newLead);
+    const formatDate = (date: Dayjs) => date.format("YYYY-MM-DD");
+    const followUpDate = data.followUp
+      ? formatDate(data.followUp)
+      : formatDate(dayjs().add(7, "day"));
+
+    // Capture notes at submit time so closure is always fresh
+    const currentNotes = [...notes];
+    // Add any unsaved note still sitting in the textarea
+    const pendingNote = newNote.trim();
+    if (pendingNote) currentNotes.push(pendingNote);
+
+    mutate(
+      {
+        fullName: data.name.trim(),
+        phone: data.phone.trim(),
+        email: data.email?.trim() || undefined,
+        country: data.country, // clean value, no emoji
+        source: data.source,
+        status: stageCfg.apiStatus,
+        priority: priorityCfg.apiValue,
+        ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
+        followUpDate,
+        notes: currentNotes.length > 0 ? currentNotes : undefined,
+      },
+      {
+        onSuccess: (res) => {
+          const now = new Date().toISOString();
+
+          const newLead: Lead = {
+            id: res.id ?? `lead-${Date.now()}`,
+            name: res.fullName,
+            phone: res.phone,
+            email: res.email ?? "",
+            country: res.country,
+            source: data.source,
+            status: stageCfg.apiStatus,
+            stage: data.stage,
+            priority: data.priority,
+            counselor: data.counselor,
+            followUp: data.followUp
+              ? data.followUp.format("YYYY-MM-DD")
+              : followUpDate,
+            ieltsScore: data.ieltsScore || undefined,
+            notes: currentNotes.map((text, i) => ({
+              id: `note-${Date.now()}-${i}`,
+              text,
+              createdAt: now,
+              author: data.counselor || "Admin",
+            })),
+            createdAt: now.split("T")[0],
+          };
+
+          message.success("Lead added successfully!");
+          onSave(newLead);
+        },
+        onError: (err) => {
+          message.error(err?.message || "Failed to create lead");
+        },
+      },
+    );
   };
 
   return (
     <CustomModal open={open} onClose={onClose}>
-      {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
@@ -319,11 +382,10 @@ const LeadModal: React.FC<Props> = ({
         </button>
       </div>
 
-      {/* ── Body ── */}
       <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
         <StepIndicator current={step} />
 
-        {/* ─── STEP 1: Personal Info ─── */}
+        {/* STEP 1 */}
         {step === 1 && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-1 bg-blue-50">
@@ -401,7 +463,7 @@ const LeadModal: React.FC<Props> = ({
           </div>
         )}
 
-        {/* ─── STEP 2: Classification ─── */}
+        {/* STEP 2 */}
         {step === 2 && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-1 bg-purple-50">
@@ -418,7 +480,6 @@ const LeadModal: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Stage toggle */}
             <div>
               <label className="block text-xs font-semibold text-gray-800 mb-2">
                 Pipeline Stage
@@ -449,7 +510,6 @@ const LeadModal: React.FC<Props> = ({
               />
             </div>
 
-            {/* Priority toggle */}
             <div>
               <label className="block text-xs font-semibold text-gray-800 mb-2">
                 Priority
@@ -517,10 +577,9 @@ const LeadModal: React.FC<Props> = ({
           </div>
         )}
 
-        {/* ─── STEP 3: Notes & Review ─── */}
+        {/* STEP 3 */}
         {step === 3 && (
           <div className="flex flex-col gap-4">
-            {/* Review summary */}
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                 Review Details
@@ -575,10 +634,16 @@ const LeadModal: React.FC<Props> = ({
                     value={watchedValues.followUp.format("MMM D, YYYY")}
                   />
                 )}
+                {watchedValues.ieltsScore && (
+                  <ReviewRow
+                    icon={<RiAwardLine size={13} />}
+                    label="IELTS"
+                    value={watchedValues.ieltsScore}
+                  />
+                )}
               </div>
             </div>
 
-            {/* Notes */}
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                 Initial Notes (optional)
@@ -660,7 +725,6 @@ const LeadModal: React.FC<Props> = ({
 
       {/* ── Footer ── */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
-        {/* Progress dots */}
         <div className="flex items-center gap-1.5">
           {[1, 2, 3].map((s) => (
             <div
@@ -681,7 +745,8 @@ const LeadModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleBack}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-slate-200 bg-white text-slate-600 cursor-pointer outline-none hover:bg-slate-50 transition-all"
+              disabled={isPending}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-slate-200 bg-white text-slate-600 cursor-pointer outline-none hover:bg-slate-50 transition-all disabled:opacity-50"
             >
               <RiArrowLeftLine size={14} /> Back
             </button>
@@ -699,9 +764,19 @@ const LeadModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleSubmit(onSubmit)}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-bold border-none bg-emerald-600 text-white cursor-pointer outline-none hover:bg-emerald-700 transition-all"
+              disabled={isPending}
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-bold border-none bg-emerald-600 text-white cursor-pointer outline-none hover:bg-emerald-700 transition-all disabled:opacity-75"
             >
-              <RiCheckLine size={14} /> Save Lead
+              {isPending ? (
+                <>
+                  <Spin size="small" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <RiCheckLine size={14} /> Save Lead
+                </>
+              )}
             </button>
           )}
         </div>

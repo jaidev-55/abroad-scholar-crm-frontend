@@ -19,7 +19,8 @@ interface CustomSelectProps<T extends FieldValues> {
   size?: "small" | "middle" | "large";
   control: Control<T>;
   errors: FieldErrors<T>;
-  icon?: ReactNode; // ✅ NEW
+  icon?: ReactNode;
+  onChange?: (v: string) => void;
 }
 
 const CustomSelect = <T extends FieldValues>({
@@ -33,6 +34,7 @@ const CustomSelect = <T extends FieldValues>({
   size = "middle",
   errors,
   icon,
+  onChange,
 }: CustomSelectProps<T>) => {
   return (
     <div className="flex flex-col gap-1.5">
@@ -60,6 +62,10 @@ const CustomSelect = <T extends FieldValues>({
                 placeholder={placeholder}
                 className="w-full"
                 size={size}
+                onChange={(v) => {
+                  field.onChange(v);
+                  onChange?.(v);
+                }}
                 style={{ paddingLeft: icon ? 28 : undefined }}
                 status={errors[name] ? "error" : undefined}
                 options={options}

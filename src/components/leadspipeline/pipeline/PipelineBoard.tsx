@@ -1,82 +1,94 @@
 import React from "react";
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-  type SensorDescriptor,
+import { DndContext, DragOverlay } from "@dnd-kit/core";
+import type {
+  SensorDescriptor,
+  SensorOptions,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
-
+import type { Lead } from "../../../types/lead.types";
 import { STAGES } from "../constants";
 import KanbanColumn from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
-import type { Lead, Stage } from "../../../types/lead.types";
 
-interface DnDHandlers {
-  sensors: SensorDescriptor<any>[];
-  activeId: string | null;
-  overStageId: string | null;
-  handleDragStart: (event: DragStartEvent) => void;
-  handleDragOver: (event: DragOverEvent) => void;
-  handleDragEnd: (event: DragEndEvent) => void;
-}
-
-interface Props {
+interface PipelineBoardProps {
   leads: Lead[];
-  dnd: DnDHandlers;
+  dnd: {
+    sensors: SensorDescriptor<SensorOptions>[];
+    activeId: string | null;
+    overStageId: string | null;
+    handleDragStart: (e: DragStartEvent) => void;
+    handleDragOver: (e: DragOverEvent) => void;
+    handleDragEnd: (e: DragEndEvent) => void;
+  };
   actionHandlers: {
-    onMarkLost: (l: Lead) => void;
-    onMoveTo: (id: string, s: string) => void;
-    onViewNotes: (l: Lead) => void;
-    onView: (l: Lead) => void;
-    onEdit: (l: Lead) => void;
-    onCall: (l: Lead) => void;
-    onEmail: (l: Lead) => void;
+    onMarkLost: (lead: Lead) => void;
+    onMoveTo: (leadId: string, stageId: string) => void;
+    onViewNotes: (lead: Lead) => void;
+    onView: (lead: Lead) => void;
+    onEdit: (lead: Lead) => void;
+    onCall: (lead: Lead) => void;
+    onEmail: (lead: Lead) => void;
   };
   onAddToStage: (stageId: string) => void;
 }
 
-const PipelineBoard: React.FC<Props> = ({
+const PipelineBoard: React.FC<PipelineBoardProps> = ({
   leads,
   dnd,
   actionHandlers,
   onAddToStage,
 }) => {
-  const activeLead = dnd.activeId
-    ? leads.find((l) => l.id === dnd.activeId)
-    : null;
+  const {
+    sensors,
+    activeId,
+    overStageId,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+  } = dnd;
+  const activeLead = leads.find((l) => l.id === activeId) ?? null;
 
   return (
     <DndContext
-      sensors={dnd.sensors}
-      collisionDetection={closestCorners}
-      onDragStart={dnd.handleDragStart}
-      onDragOver={dnd.handleDragOver}
-      onDragEnd={dnd.handleDragEnd}
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
     >
-      <div className="w-full overflow-x-auto h-full flex-1 pb-2">
-        <div className="flex gap-4 min-w-max h-full">
-          {STAGES.map((stage: Stage) => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              leads={leads.filter((l) => l.stage === stage.id)}
-              isOver={dnd.overStageId === stage.id}
-              onAddToStage={onAddToStage}
-              {...actionHandlers}
-            />
-          ))}
-        </div>
+      <div className="flex gap-3 w-full overflow-x-auto pb-2">
+        {STAGES.map((stage) => (
+          <KanbanColumn
+            key={stage.id}
+            stage={stage}
+            leads={leads.filter((l) => l.stage === stage.id)}
+            isOver={overStageId === stage.id}
+            onAddToStage={onAddToStage}
+            onMarkLost={actionHandlers.onMarkLost}
+            onMoveTo={actionHandlers.onMoveTo}
+            onViewNotes={actionHandlers.onViewNotes}
+            onView={actionHandlers.onView}
+            onEdit={actionHandlers.onEdit}
+            onCall={actionHandlers.onCall}
+            onEmail={actionHandlers.onEmail}
+          />
+        ))}
       </div>
-
       <DragOverlay>
-        {activeLead && (
-          <div style={{ transform: "rotate(3deg)", opacity: 0.95 }}>
-            <KanbanCard lead={activeLead} isDragging {...actionHandlers} />
-          </div>
-        )}
+        {activeLead ? (
+          <KanbanCard
+            lead={activeLead}
+            onMarkLost={actionHandlers.onMarkLost}
+            onMoveTo={actionHandlers.onMoveTo}
+            onViewNotes={actionHandlers.onViewNotes}
+            onView={actionHandlers.onView}
+            onEdit={actionHandlers.onEdit}
+            onCall={actionHandlers.onCall}
+            onEmail={actionHandlers.onEmail}
+            isDragging
+          />
+        ) : null}
       </DragOverlay>
     </DndContext>
   );

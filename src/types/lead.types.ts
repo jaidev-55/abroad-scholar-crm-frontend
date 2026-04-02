@@ -39,7 +39,7 @@ export interface Note {
 export type DateRangeValue = [Dayjs | null, Dayjs | null] | null;
 
 // Leads Pipeline
-export type LeadStatus = "Active" | "Lost" | "Converted";
+export type LeadStatus = "NEW" | "IN_PROGRESS" | "CONVERTED" | "LOST";
 
 export interface Lead {
   id: string;

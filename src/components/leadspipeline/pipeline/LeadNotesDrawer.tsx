@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Drawer } from "antd";
+import { Drawer, Spin } from "antd";
 import {
   RiStickyNoteLine,
   RiFileTextLine,
@@ -24,6 +24,8 @@ import {
   RiDeleteBinLine,
 } from "react-icons/ri";
 import type { Lead } from "../../../types/lead.types";
+import { getLeadActivity } from "../../../api/leads";
+import { useQuery } from "@tanstack/react-query";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -54,8 +56,6 @@ interface ActivityEvent {
   timestamp: string;
   meta?: Record<string, string>;
 }
-
-
 
 interface Props {
   lead: Lead | null;
@@ -163,108 +163,6 @@ const ACTIVITY_CONFIG: Record<ActivityType, ActivityConfig> = {
     label: "Overdue",
   },
 };
-
-// ─────────────────────────────────────────────
-// MOCK ACTIVITY GENERATOR
-// ─────────────────────────────────────────────
-function buildActivity(lead: Lead): ActivityEvent[] {
-  const base = new Date(lead.createdAt).getTime();
-const isOverdue = lead.followUp ? new Date(lead.followUp) < new Date() : false;
-
-  const events: ActivityEvent[] = [
-    {
-      id: "ev-1",
-      type: "created",
-      author: lead.counselor,
-      title: "Lead created",
-      description: `${lead.name} was added to the pipeline via ${lead.source}.`,
-      timestamp: new Date(base).toISOString(),
-    },
-    {
-      id: "ev-2",
-      type: "stage_change",
-      author: lead.counselor,
-      title: "Stage updated",
-      timestamp: new Date(base + 1 * 3600000).toISOString(),
-      meta: { from: "New", to: "In Progress" },
-    },
-    {
-      id: "ev-3",
-      type: "call",
-      author: lead.counselor,
-      title: "Discovery call",
-      description:
-        "Initial call to understand student goals, preferred countries, and budget.",
-      timestamp: new Date(base + 2.5 * 3600000).toISOString(),
-      meta: { duration: "4m 32s", outcome: "Interested" },
-    },
-    {
-      id: "ev-4",
-      type: "email",
-      author: lead.counselor,
-      title: "Welcome email sent",
-      description: "Sent programme overview and intake calendar.",
-      timestamp: new Date(base + 5 * 3600000).toISOString(),
-      meta: { subject: "Your Study Abroad Journey Starts Here 🎓" },
-    },
-    {
-      id: "ev-5",
-      type: "followup_set",
-      author: lead.counselor,
-      title: "Follow-up scheduled",
-      timestamp: new Date(base + 6 * 3600000).toISOString(),
-      meta: {
-        date: new Date(lead.followUp).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      },
-    },
-    {
-      id: "ev-6",
-      type: "edit",
-      author: "Admin",
-      title: "Lead details updated",
-      timestamp: new Date(base + 8 * 3600000).toISOString(),
-      meta: { field: "Country", from: "🇺🇸 USA", to: lead.country },
-    },
-    ...lead.notes.map((n, i) => ({
-      id: `ev-note-${i}`,
-      type: "note_added" as ActivityType,
-      title: "Note added",
-      description: n.text,
-      author: n.author,
-      timestamp: n.createdAt,
-    })),
-    {
-      id: "ev-7",
-      type: "call",
-      author: lead.counselor,
-      title: "Follow-up call",
-      description: "Discussed IELTS prep plan and shared document checklist.",
-      timestamp: new Date(base + 24 * 3600000).toISOString(),
-      meta: { duration: "11m 04s", outcome: "Docs requested" },
-    },
-    ...(isOverdue
-      ? [
-          {
-            id: "ev-8",
-            type: "overdue" as ActivityType,
-            author: "System",
-            title: "Follow-up overdue",
-            description:
-              "Scheduled follow-up date has passed without a check-in.",
-            timestamp: new Date(lead.followUp).toISOString(),
-          },
-        ]
-      : []),
-  ];
-
-  return events.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
-}
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -555,9 +453,35 @@ const DetailRow: React.FC<{
   </div>
 );
 
-// ─────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────
+function mapApiType(type: string): ActivityType {
+  const map: Record<string, ActivityType> = {
+    EDIT: "edit",
+    NOTE: "note_added",
+    NOTE_ADDED: "note_added",
+    STAGE_CHANGE: "stage_change",
+    CALL: "call",
+    EMAIL: "email",
+    FOLLOWUP: "followup_set",
+    FOLLOWUP_SET: "followup_set",
+    CREATED: "created",
+    OVERDUE: "overdue",
+  };
+  return map[type] ?? "edit";
+}
+
+function mapApiActivity(
+  a: import("../../../api/leads").ApiActivity,
+): ActivityEvent {
+  return {
+    id: a.id,
+    type: mapApiType(a.type),
+    title: a.message || "Activity",
+    author: a.user?.name || "System",
+    timestamp: a.createdAt,
+    meta: a.meta ?? {},
+  };
+}
+
 const LeadNotesDrawer: React.FC<Props> = ({
   lead,
   onClose,
@@ -569,6 +493,13 @@ const LeadNotesDrawer: React.FC<Props> = ({
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Fetch real activity from API
+  const { data: rawActivity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ["lead-activity", lead?.id],
+    queryFn: () => getLeadActivity(lead!.id),
+    enabled: !!lead?.id,
+  });
+
   // Reset tab on new lead
   React.useEffect(() => {
     if (lead) {
@@ -579,6 +510,8 @@ const LeadNotesDrawer: React.FC<Props> = ({
 
   if (!lead) return null;
 
+  const activity: ActivityEvent[] = rawActivity.map(mapApiActivity);
+
   const stage = STAGE_MAP[lead.stage] ?? {
     label: lead.stage,
     color: "#64748b",
@@ -586,8 +519,9 @@ const LeadNotesDrawer: React.FC<Props> = ({
     border: "#e2e8f0",
   };
   const priority = PRIORITY_CONFIG[lead.priority];
-  const isOverdue = new Date(lead.followUp) < new Date();
-  const activity = buildActivity(lead);
+  const isOverdue = lead.followUp
+    ? new Date(lead.followUp) < new Date()
+    : false;
 
   const handleSubmit = () => {
     const text = newNote.trim();
@@ -927,11 +861,15 @@ const LeadNotesDrawer: React.FC<Props> = ({
               <DetailRow
                 icon={<RiCalendarLine size={14} />}
                 label="Follow-up"
-                value={new Date(lead.followUp).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                value={
+                  lead.followUp
+                    ? new Date(lead.followUp).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Not set"
+                }
                 highlight={isOverdue}
               />
               <DetailRow
@@ -1011,13 +949,21 @@ const LeadNotesDrawer: React.FC<Props> = ({
 
             {/* Timeline */}
             <div className="flex flex-col">
-              {activity.map((event, i) => (
-                <ActivityCard
-                  key={event.id}
-                  event={event}
-                  isLast={i === activity.length - 1}
-                />
-              ))}
+              {activityLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {activity.map((event, i) => (
+                    <ActivityCard
+                      key={event.id}
+                      event={event}
+                      isLast={i === activity.length - 1}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

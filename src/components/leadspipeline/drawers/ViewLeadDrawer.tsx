@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Drawer, Input } from "antd";
+import { Drawer, Input, Spin } from "antd";
+import { useQuery } from "@tanstack/react-query";
 import {
   RiPhoneLine,
   RiMailLine,
@@ -27,16 +28,7 @@ import {
   RiSendPlaneLine,
 } from "react-icons/ri";
 import type { Lead } from "../../../types/lead.types";
-
-// ─────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────
-interface Note {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: string;
-}
+import { getLeadActivity, type ApiActivity } from "../../../api/leads";
 
 type ActivityType =
   | "created"
@@ -79,196 +71,140 @@ const ACTIVITY_CONFIG: Record<
     color: "#2563eb",
     bg: "#eff6ff",
     border: "#bfdbfe",
-    label: "Lead Created",
+    label: "Created",
   },
   stage_change: {
     icon: <RiArrowRightLine size={12} />,
     color: "#7c3aed",
     bg: "#f5f3ff",
     border: "#ddd6fe",
-    label: "Stage Changed",
+    label: "Stage Change",
   },
   note_added: {
     icon: <RiStickyNoteLine size={12} />,
     color: "#0891b2",
     bg: "#ecfeff",
     border: "#a5f3fc",
-    label: "Note Added",
+    label: "Note",
   },
   call: {
     icon: <RiPhoneFill size={12} />,
     color: "#059669",
     bg: "#f0fdf4",
     border: "#bbf7d0",
-    label: "Call Made",
+    label: "Call",
   },
   email: {
     icon: <RiMailFill size={12} />,
     color: "#d97706",
     bg: "#fffbeb",
     border: "#fde68a",
-    label: "Email Sent",
+    label: "Email",
   },
   edit: {
     icon: <RiPencilLine size={12} />,
     color: "#475569",
     bg: "#f8fafc",
     border: "#e2e8f0",
-    label: "Lead Edited",
+    label: "Updated",
   },
   followup_set: {
     icon: <RiCalendarLine size={12} />,
     color: "#db2777",
     bg: "#fdf2f8",
     border: "#fbcfe8",
-    label: "Follow-up Set",
+    label: "Follow-up",
   },
   overdue: {
     icon: <RiAlertLine size={12} />,
     color: "#ef4444",
     bg: "#fff5f5",
     border: "#fed7d7",
-    label: "Overdue Alert",
+    label: "Overdue",
   },
 };
-
-const FILTER_TYPES: { key: ActivityType | "all"; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "stage_change", label: "Stages" },
-  { key: "note_added", label: "Notes" },
-  { key: "call", label: "Calls" },
-  { key: "email", label: "Emails" },
-  { key: "edit", label: "Edits" },
-];
-
-// ─────────────────────────────────────────────
-// GENERATE MOCK ACTIVITY for a lead
-// ─────────────────────────────────────────────
-function generateActivity(lead: Lead): ActivityEvent[] {
-  const base = new Date(lead.createdAt).getTime();
-  const authors = [lead.counselor, "Admin", "System"];
-
-  const events: ActivityEvent[] = [
-    {
-      id: "a1",
-      type: "created",
-      title: "Lead created",
-      description: `${lead.name} was added to the pipeline via ${lead.source}.`,
-      author: lead.counselor,
-      timestamp: new Date(base).toISOString(),
-    },
-    {
-      id: "a2",
-      type: "stage_change",
-      title: "Stage updated",
-      description: undefined,
-      author: lead.counselor,
-      timestamp: new Date(base + 1 * 3600000).toISOString(),
-      meta: { from: "New", to: "In Progress" },
-    },
-    {
-      id: "a3",
-      type: "call",
-      title: "Call placed",
-      description:
-        "Initial discovery call to understand student goals and timeline.",
-      author: lead.counselor,
-      timestamp: new Date(base + 2 * 3600000).toISOString(),
-      meta: { duration: "4m 32s", outcome: "Interested" },
-    },
-    {
-      id: "a4",
-      type: "email",
-      title: "Welcome email sent",
-      description:
-        "Sent programme overview and intake calendar for selected universities.",
-      author: lead.counselor,
-      timestamp: new Date(base + 5 * 3600000).toISOString(),
-      meta: { subject: "Your Study Abroad Journey Starts Here" },
-    },
-    {
-      id: "a5",
-      type: "followup_set",
-      title: "Follow-up scheduled",
-      description: undefined,
-      author: lead.counselor,
-      timestamp: new Date(base + 6 * 3600000).toISOString(),
-      meta: {
-        date: new Date(lead.followUp).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      },
-    },
-    ...lead.notes.map((note, i) => ({
-      id: `note-act-${i}`,
-      type: "note_added" as ActivityType,
-      title: "Note added",
-      description: note.text,
-      author: note.author,
-      timestamp: note.createdAt,
-    })),
-    {
-      id: "a6",
-      type: "edit",
-      title: "Lead details updated",
-      description: undefined,
-      author: authors[1],
-      timestamp: new Date(base + 12 * 3600000).toISOString(),
-      meta: { field: "Country", from: "🇺🇸 USA", to: lead.country },
-    },
-    {
-      id: "a7",
-      type: "call",
-      title: "Follow-up call",
-      description: "Discussed IELTS preparation plan and document checklist.",
-      author: lead.counselor,
-      timestamp: new Date(base + 24 * 3600000).toISOString(),
-      meta: { duration: "11m 04s", outcome: "Documents requested" },
-    },
-    {
-      id: "a8",
-      type: "email",
-      title: "Document checklist sent",
-      description:
-        "Shared the full document requirements PDF and deadline tracker.",
-      author: lead.counselor,
-      timestamp: new Date(base + 26 * 3600000).toISOString(),
-      meta: { subject: "Documents Required for Your Application" },
-    },
-    ...(new Date(lead.followUp) < new Date()
-      ? [
-          {
-            id: "a9",
-            type: "overdue" as ActivityType,
-            title: "Follow-up overdue",
-            description:
-              "Scheduled follow-up date has passed without check-in.",
-            author: "System",
-            timestamp: new Date(lead.followUp).toISOString(),
-          },
-        ]
-      : []),
-  ];
-
-  return events.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
+function mapApiType(type: string): ActivityType {
+  const map: Record<string, ActivityType> = {
+    EDIT: "edit",
+    NOTE: "note_added",
+    NOTE_ADDED: "note_added",
+    STAGE_CHANGE: "stage_change",
+    CALL: "call",
+    EMAIL: "email",
+    FOLLOWUP: "followup_set",
+    FOLLOWUP_SET: "followup_set",
+    CREATED: "created",
+    OVERDUE: "overdue",
+  };
+  return map[type] ?? "edit";
 }
 
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
+function mapApiActivity(a: ApiActivity): ActivityEvent {
+  return {
+    id: a.id,
+    type: mapApiType(a.type),
+    title: a.message || "Activity",
+    author: a.user?.name || "System",
+    timestamp: a.createdAt,
+    meta: a.meta ?? {},
+  };
+}
+
+const FILTER_TYPES: {
+  key: ActivityType | "all";
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  { key: "all", label: "All", icon: null },
+  {
+    key: "stage_change",
+    label: "Stages",
+    icon: <RiArrowRightLine size={10} />,
+  },
+  { key: "note_added", label: "Notes", icon: <RiStickyNoteLine size={10} /> },
+  { key: "call", label: "Calls", icon: <RiPhoneFill size={10} /> },
+  { key: "email", label: "Emails", icon: <RiMailFill size={10} /> },
+  { key: "edit", label: "Edits", icon: <RiPencilLine size={10} /> },
+];
+
+const TABS = [
+  { key: "notes", label: "Notes", icon: <RiStickyNoteLine size={13} /> },
+  { key: "details", label: "Details", icon: <RiFileTextLine size={13} /> },
+  { key: "activity", label: "Activity", icon: <RiHistoryLine size={13} /> },
+];
+
+const STAGE_MAP: Record<
+  string,
+  { label: string; color: string; bg: string; border: string }
+> = {
+  new: { label: "New", color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
+  progress: {
+    label: "In Progress",
+    color: "#8B5CF6",
+    bg: "#F5F3FF",
+    border: "#DDD6FE",
+  },
+  converted: {
+    label: "Converted",
+    color: "#10B981",
+    bg: "#ECFDF5",
+    border: "#A7F3D0",
+  },
+  lost: { label: "Lost", color: "#EF4444", bg: "#FEF2F2", border: "#FECACA" },
+};
+
 const UserAvatar: React.FC<{ name: string; size?: number }> = ({
   name,
   size = 40,
 }) => {
-  const initials = name
+  const safe = name || "?";
+  const initials = safe
     .split(" ")
     .map((n) => n[0])
-    .join("");
-  const hue = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const hue = safe.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
   return (
     <div
       className="flex items-center justify-center font-bold shrink-0 select-none"
@@ -312,7 +248,6 @@ function fullDate(iso: string): string {
   });
 }
 
-// Group events by date
 function groupByDate(
   events: ActivityEvent[],
 ): { dateLabel: string; events: ActivityEvent[] }[] {
@@ -322,8 +257,7 @@ function groupByDate(
     if (!groups[key]) groups[key] = [];
     groups[key].push(e);
   }
-  return Object.entries(groups).map(([key, events]) => {
-    const d = new Date(key);
+  return Object.entries(groups).map(([key, evts]) => {
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     const label =
@@ -331,18 +265,39 @@ function groupByDate(
         ? "Today"
         : key === yesterday
           ? "Yesterday"
-          : d.toLocaleDateString("en-US", {
+          : new Date(key).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric",
             });
-    return { dateLabel: label, events };
+    return { dateLabel: label, events: evts };
   });
 }
 
-// ─────────────────────────────────────────────
-// ACTIVITY EVENT CARD
-// ─────────────────────────────────────────────
+const InfoRow: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  highlight?: boolean;
+}> = ({ icon, label, value, highlight }) => (
+  <div className="flex items-center gap-3 py-3 border-b border-slate-50 last:border-0">
+    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 text-slate-400">
+      {icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+        {label}
+      </p>
+      <p
+        className={`text-[13px] font-semibold truncate mt-0.5 ${highlight ? "text-rose-500" : "text-slate-800"}`}
+      >
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
+// ─── ACTIVITY CARD ───────────────────────────────────
 const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
   event,
   isLast,
@@ -352,7 +307,6 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
 
   return (
     <div className="flex gap-3 group">
-      {/* Timeline dot + line */}
       <div
         className="flex flex-col items-center shrink-0"
         style={{ width: 28 }}
@@ -375,15 +329,13 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0 pb-4">
         <div
           className="bg-white rounded-xl border border-slate-100 p-3 cursor-pointer hover:border-slate-200 hover:shadow-sm transition-all duration-150"
           onClick={() => setExpanded(!expanded)}
         >
-          {/* Top row */}
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span
                 className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
                 style={{ background: cfg.bg, color: cfg.color }}
@@ -403,7 +355,7 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
           </div>
 
           {/* Meta chips */}
-          {event.meta && (
+          {event.meta && Object.keys(event.meta).length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {event.type === "stage_change" &&
                 event.meta.from &&
@@ -421,15 +373,21 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
               {event.type === "edit" && event.meta.field && (
                 <div className="flex items-center gap-1 text-[11px] font-semibold">
                   <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
-                    {event.meta.field}:
+                    {event.meta.field}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-400 line-through">
-                    {event.meta.from}
-                  </span>
-                  <RiArrowRightLine size={10} className="text-slate-400" />
-                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600">
-                    {event.meta.to}
-                  </span>
+                  {event.meta.oldValue && (
+                    <>
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-400 line-through">
+                        {event.meta.oldValue}
+                      </span>
+                      <RiArrowRightLine size={10} className="text-slate-400" />
+                    </>
+                  )}
+                  {event.meta.newValue && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600">
+                      {event.meta.newValue}
+                    </span>
+                  )}
                 </div>
               )}
               {event.type === "call" && (
@@ -448,7 +406,7 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
               )}
               {event.type === "email" && event.meta.subject && (
                 <span className="flex items-center gap-1 text-[11px] text-slate-500 italic truncate max-w-full">
-                  <RiMailLine size={10} /> "{event.meta.subject}"
+                  <RiMailLine size={10} /> &ldquo;{event.meta.subject}&rdquo;
                 </span>
               )}
               {event.type === "followup_set" && event.meta.date && (
@@ -459,7 +417,7 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
             </div>
           )}
 
-          {/* Description (expandable) */}
+          {/* Expandable description */}
           {event.description && (
             <div
               className={`mt-2 overflow-hidden transition-all duration-200 ${expanded ? "max-h-40" : "max-h-0"}`}
@@ -470,7 +428,7 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
             </div>
           )}
 
-          {/* Footer row */}
+          {/* Footer */}
           <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-50">
             <div className="flex items-center gap-1.5">
               <UserAvatar name={event.author} size={18} />
@@ -490,55 +448,7 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
   );
 };
 
-// ─────────────────────────────────────────────
-// TABS
-// ─────────────────────────────────────────────
-const TABS = [
-  { key: "notes", label: "Notes", icon: <RiStickyNoteLine size={13} /> },
-  { key: "details", label: "Details", icon: <RiFileTextLine size={13} /> },
-  { key: "activity", label: "Activity", icon: <RiHistoryLine size={13} /> },
-];
-
-// ─────────────────────────────────────────────
-// INFO ROW (Details tab)
-// ─────────────────────────────────────────────
-const InfoRow: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  highlight?: boolean;
-}> = ({ icon, label, value, highlight }) => (
-  <div className="flex  items-center gap-3 py-3 border-b border-slate-50 last:border-0">
-    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 text-slate-400">
-      {icon}
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-        {label}
-      </p>
-      <p
-        className={`text-[13px] font-semibold truncate mt-0.5 ${highlight ? "text-rose-500" : "text-slate-800"}`}
-      >
-        {value}
-      </p>
-    </div>
-  </div>
-);
-
-// ─────────────────────────────────────────────
-// STAGE MAP
-// ─────────────────────────────────────────────
-const STAGE_MAP: Record<string, { label: string; color: string; bg: string }> =
-  {
-    new: { label: "New", color: "#3B82F6", bg: "#EFF6FF" },
-    progress: { label: "In Progress", color: "#8B5CF6", bg: "#F5F3FF" },
-    applied: { label: "Applied", color: "#F59E0B", bg: "#FFFBEB" },
-    converted: { label: "Converted", color: "#10B981", bg: "#ECFDF5" },
-  };
-
-// ─────────────────────────────────────────────
-// MAIN DRAWER
-// ─────────────────────────────────────────────
+// ─── MAIN COMPONENT ──────────────────────────────────
 const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
   const [activeTab, setActiveTab] = useState<"notes" | "details" | "activity">(
     "notes",
@@ -549,10 +459,15 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
   const [activitySearch, setActivitySearch] = useState("");
   const [newNote, setNewNote] = useState("");
 
-  // hooks must stay here
+  const { data: rawActivity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ["lead-activity", lead?.id],
+    queryFn: () => getLeadActivity(lead!.id),
+    enabled: !!lead?.id,
+  });
+
   const allActivity = useMemo(
-    () => (lead ? generateActivity(lead) : []),
-    [lead],
+    () => rawActivity.map(mapApiActivity),
+    [rawActivity],
   );
 
   const filteredActivity = useMemo(() => {
@@ -571,7 +486,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           Object.values(e.meta || {}).some((v) => v.toLowerCase().includes(q)),
       );
     }
-
     return list;
   }, [allActivity, activityFilter, activitySearch]);
 
@@ -586,30 +500,41 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
     label: lead.stage,
     color: "#64748b",
     bg: "#f8fafc",
+    border: "#e2e8f0",
   };
-
-  const isOverdue = new Date(lead.followUp) < new Date();
-
-  const priorityConfig = {
-    Hot: {
-      icon: <RiFireLine size={12} />,
-      color: "#ef4444",
-      bg: "#fff5f5",
-      border: "#fed7d7",
-    },
-    Warm: {
-      icon: <RiFlashlightLine size={12} />,
-      color: "#f59e0b",
-      bg: "#fffbeb",
-      border: "#fde68a",
-    },
-    Cold: {
-      icon: <RiSnowflakeLine size={12} />,
-      color: "#3b82f6",
-      bg: "#eff6ff",
-      border: "#bfdbfe",
-    },
-  }[lead.priority];
+  const isOverdue = lead.followUp
+    ? new Date(lead.followUp) < new Date()
+    : false;
+  const priorityConfig = (
+    {
+      Hot: {
+        icon: <RiFireLine size={12} />,
+        color: "#ef4444",
+        bg: "#fff5f5",
+        border: "#fed7d7",
+      },
+      Warm: {
+        icon: <RiFlashlightLine size={12} />,
+        color: "#f59e0b",
+        bg: "#fffbeb",
+        border: "#fde68a",
+      },
+      Cold: {
+        icon: <RiSnowflakeLine size={12} />,
+        color: "#3b82f6",
+        bg: "#eff6ff",
+        border: "#bfdbfe",
+      },
+    } as Record<
+      string,
+      { icon: React.ReactNode; color: string; bg: string; border: string }
+    >
+  )[lead.priority] ?? {
+    icon: null,
+    color: "#64748b",
+    bg: "#f8fafc",
+    border: "#e2e8f0",
+  };
 
   return (
     <Drawer
@@ -655,14 +580,13 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           </button>
         </div>
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-2">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border"
             style={{
               background: stage.bg,
               color: stage.color,
-              borderColor: `${stage.color}40`,
+              borderColor: stage.border,
             }}
           >
             {stage.label}
@@ -680,6 +604,11 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
             <RiMapPinLine size={11} /> {lead.source}
           </span>
+          {lead.counselor && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
+              <RiUserSmileLine size={11} /> {lead.counselor}
+            </span>
+          )}
         </div>
       </div>
 
@@ -688,7 +617,9 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
+            onClick={() =>
+              setActiveTab(tab.key as "notes" | "details" | "activity")
+            }
             className="px-4 py-3 bg-transparent border-none text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 transition-colors border-b-2 whitespace-nowrap"
             style={{
               color: activeTab === tab.key ? "#2563eb" : "#94a3b8",
@@ -698,15 +629,30 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           >
             {tab.icon} {tab.label}
             {tab.key === "notes" && lead.notes.length > 0 && (
-              <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 text-[9px] font-bold flex items-center justify-center ml-0.5">
+              <span
+                className="min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{
+                  background: activeTab === "notes" ? "#2563eb" : "#f1f5f9",
+                  color: activeTab === "notes" ? "#fff" : "#64748b",
+                }}
+              >
                 {lead.notes.length}
               </span>
             )}
-            {tab.key === "activity" && (
-              <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[9px] font-bold flex items-center justify-center ml-0.5">
-                {allActivity.length}
-              </span>
-            )}
+            {tab.key === "activity" &&
+              !activityLoading &&
+              allActivity.length > 0 && (
+                <span
+                  className="min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+                  style={{
+                    background:
+                      activeTab === "activity" ? "#2563eb" : "#f1f5f9",
+                    color: activeTab === "activity" ? "#fff" : "#64748b",
+                  }}
+                >
+                  {allActivity.length}
+                </span>
+              )}
           </button>
         ))}
       </div>
@@ -733,18 +679,21 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                 lead.notes.map((note) => (
                   <div
                     key={note.id}
-                    className="bg-white  rounded-xl p-4 border border-slate-100 shadow-sm"
+                    className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all duration-150"
                   >
                     <div className="flex items-center gap-2 mb-2.5">
-                      <UserAvatar name={note.author} size={28} />
-                      <div>
+                      <UserAvatar name={note.author || "Admin"} size={28} />
+                      <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-slate-700">
-                          {note.author}
+                          {note.author || "Admin"}
                         </p>
                         <p className="text-[10px] text-slate-400">
                           {fullDate(note.createdAt)}
                         </p>
                       </div>
+                      <span className="text-[10px] text-slate-300">
+                        {timeAgo(note.createdAt)}
+                      </span>
                     </div>
                     <p className="text-[13px] text-slate-600 leading-relaxed">
                       {note.text}
@@ -754,8 +703,8 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               )}
             </div>
             <div className="bg-white border-t border-slate-100 p-4 shrink-0">
-              <p className="text-xs font-semibold text-slate-700 mb-2">
-                Add a note
+              <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                <RiAddLine size={12} className="text-slate-400" /> Add a note
               </p>
               <Input.TextArea
                 value={newNote}
@@ -767,11 +716,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                   borderRadius: 10,
                   borderColor: "#e8edf2",
                   fontSize: 13,
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && e.metaKey) {
-                    /* handle submit */
-                  }
                 }}
               />
               <div className="flex justify-between items-center mt-2.5">
@@ -797,7 +741,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         {/* DETAILS TAB */}
         {activeTab === "details" && (
           <div className="flex-1 overflow-y-auto activity-scroll">
-            <div className="mx-4 mt-4 bg-white shadow rounded-2xl border border-slate-100 px-4 py-1">
+            <div className="mx-4 mt-4 bg-white shadow-sm rounded-2xl border border-slate-100 px-4 py-1">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-3 pb-1">
                 Contact Details
               </p>
@@ -819,16 +763,20 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               <InfoRow
                 icon={<RiUserSmileLine size={14} />}
                 label="Counselor"
-                value={lead.counselor}
+                value={lead.counselor || "Unassigned"}
               />
               <InfoRow
                 icon={<RiCalendarLine size={14} />}
                 label="Follow-up"
-                value={new Date(lead.followUp).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                value={
+                  lead.followUp
+                    ? new Date(lead.followUp).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Not set"
+                }
                 highlight={isOverdue}
               />
               {lead.ieltsScore && (
@@ -839,9 +787,8 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                 />
               )}
             </div>
-
-            <div className="mx-4  mt-3 mb-4 grid grid-cols-2 gap-2.5">
-              <div className="bg-white shadow  rounded-2xl border border-slate-100 p-4 text-center">
+            <div className="mx-4 mt-3 mb-4 grid grid-cols-2 gap-2.5">
+              <div className="bg-white shadow-sm rounded-2xl border border-slate-100 p-4 text-center">
                 <p className="text-2xl font-extrabold text-slate-900">
                   {lead.notes.length}
                 </p>
@@ -849,7 +796,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                   Notes
                 </p>
               </div>
-              <div className="bg-white shadow rounded-2xl border border-slate-100 p-4 text-center">
+              <div className="bg-white shadow-sm rounded-2xl border border-slate-100 p-4 text-center">
                 <p
                   className="text-2xl font-extrabold"
                   style={{ color: isOverdue ? "#ef4444" : "#10b981" }}
@@ -867,7 +814,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         {/* ACTIVITY TAB */}
         {activeTab === "activity" && (
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            {/* Search + filter bar */}
+            {/* Search + filter */}
             <div className="bg-white border-b border-slate-100 px-4 py-3 flex flex-col gap-2.5 shrink-0">
               <Input
                 prefix={<RiSearchLine size={13} className="text-slate-400" />}
@@ -893,14 +840,14 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                       key={f.key}
                       type="button"
                       onClick={() => setActivityFilter(f.key)}
-                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap cursor-pointer border transition-all outline-none shrink-0"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap cursor-pointer border transition-all outline-none shrink-0"
                       style={{
                         background: active ? "#2563eb" : "#f8fafc",
                         color: active ? "#fff" : "#64748b",
                         borderColor: active ? "#2563eb" : "#e2e8f0",
                       }}
                     >
-                      {f.label}
+                      {f.icon} {f.label}
                     </button>
                   );
                 })}
@@ -948,36 +895,40 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                       {count}
                     </span>
                     <span className="text-[10px] text-slate-400">
-                      {cfg.label.split(" ")[0]}s
+                      {cfg.label}s
                     </span>
                   </div>
                 );
               })}
               <div className="ml-auto shrink-0">
                 <span className="text-[10px] text-slate-400 font-medium">
-                  {filteredActivity.length} events
+                  {filteredActivity.length} event
+                  {filteredActivity.length !== 1 ? "s" : ""}
                 </span>
               </div>
             </div>
 
             {/* Timeline */}
             <div className="flex-1 overflow-y-auto activity-scroll px-4 pt-4 pb-2">
-              {grouped.length === 0 ? (
+              {activityLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Spin size="large" />
+                </div>
+              ) : grouped.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
                     <RiHistoryLine size={20} className="text-slate-300" />
                   </div>
                   <p className="text-sm font-semibold text-slate-500">
-                    No matching activity
+                    No activity yet
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    Try a different filter or search term
+                    Activity will appear here as actions are taken
                   </p>
                 </div>
               ) : (
                 grouped.map(({ dateLabel, events }) => (
                   <div key={dateLabel} className="mb-4">
-                    {/* Date separator */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-px flex-1 bg-slate-100" />
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 bg-slate-100 rounded-full whitespace-nowrap">
@@ -985,7 +936,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                       </span>
                       <div className="h-px flex-1 bg-slate-100" />
                     </div>
-                    {/* Events */}
                     {events.map((event, i) => (
                       <ActivityCard
                         key={event.id}
@@ -1001,9 +951,9 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         )}
       </div>
 
-      {/* ── CTA (only on notes/details) ── */}
+      {/* ── CTA ── */}
       {activeTab !== "activity" && (
-        <div className="px-5 shadow py-4 bg-white border-t border-slate-100 shrink-0">
+        <div className="px-5 shadow-sm py-4 bg-white border-t border-slate-100 shrink-0">
           <button
             onClick={() => {
               onClose();

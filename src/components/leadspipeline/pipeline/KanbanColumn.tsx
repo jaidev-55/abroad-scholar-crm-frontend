@@ -56,34 +56,36 @@ const KanbanColumn: React.FC<{
             {leads.length}
           </span>
         </div>
-        {/* Stage-aware + button with hover expand */}
-        <Tooltip title={`Add lead to ${stage.label}`}>
-          <button
-            onClick={() => onAddToStage(stage.id)}
-            className="group flex items-center gap-1 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all duration-200 bg-transparent"
-            style={{ borderColor: "transparent" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = stage.color;
-              e.currentTarget.style.background = `${stage.bg}`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "transparent";
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <RiAddLine
-              size={14}
-              className="text-slate-400 group-hover:text-current transition-colors"
-              style={{ color: "inherit" }}
-            />
-            <span
-              className="text-[11px] font-bold overflow-hidden max-w-0 group-hover:max-w-[32px] transition-all duration-200 whitespace-nowrap opacity-0 group-hover:opacity-100"
-              style={{ color: stage.color }}
+        {/* Hide add button for "lost" stage */}
+        {stage.id !== "lost" && (
+          <Tooltip title={`Add lead to ${stage.label}`}>
+            <button
+              onClick={() => onAddToStage(stage.id)}
+              className="group flex items-center gap-1 px-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all duration-200 bg-transparent"
+              style={{ borderColor: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = stage.color;
+                e.currentTarget.style.background = `${stage.bg}`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "transparent";
+                e.currentTarget.style.background = "transparent";
+              }}
             >
-              Add
-            </span>
-          </button>
-        </Tooltip>
+              <RiAddLine
+                size={14}
+                className="text-slate-400 group-hover:text-current transition-colors"
+                style={{ color: "inherit" }}
+              />
+              <span
+                className="text-[11px] font-bold overflow-hidden max-w-0 group-hover:max-w-[32px] transition-all duration-200 whitespace-nowrap opacity-0 group-hover:opacity-100"
+                style={{ color: stage.color }}
+              >
+                Add
+              </span>
+            </button>
+          </Tooltip>
+        )}
       </div>
       <div className="mx-0.5 mb-2.5 h-[3px] bg-slate-100 rounded overflow-hidden">
         <div
@@ -107,7 +109,8 @@ const KanbanColumn: React.FC<{
             background: isOver ? stage.bg : "transparent",
           }}
         >
-          {leads.length === 0 && !isOver && (
+          {/* Empty state for normal stages */}
+          {leads.length === 0 && !isOver && stage.id !== "lost" && (
             <button
               onClick={() => onAddToStage(stage.id)}
               className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 cursor-pointer hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all bg-transparent group"
@@ -118,6 +121,12 @@ const KanbanColumn: React.FC<{
               />
               <p className="text-xs font-medium">Add first lead</p>
             </button>
+          )}
+          {/* Empty state for lost stage */}
+          {leads.length === 0 && !isOver && stage.id === "lost" && (
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-slate-300 select-none">
+              <p className="text-xs font-medium">No lost leads</p>
+            </div>
           )}
           {leads.map((lead) => (
             <KanbanCard

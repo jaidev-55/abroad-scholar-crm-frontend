@@ -7,10 +7,11 @@ import {
 } from "react-icons/ri";
 import { useState } from "react";
 import { COUNSELORS, COUNTRIES, PRIORITIES, SOURCES } from "../constants";
-import CustomDatePicker from "../../common/CustomDatePicker";
 import CustomInput from "../../common/CustomInput";
 import CustomSelect from "../../common/CustomSelect";
 import { useForm } from "react-hook-form";
+import type { DateRangeValue } from "../../../types/lead.types";
+import CustomDatePicker from "../../common/CustomDatePicker";
 
 interface FilterBarProps {
   filteredCount: number;
@@ -18,6 +19,12 @@ interface FilterBarProps {
   clearFilters: () => void;
   hasFilters: boolean;
   onExport: () => void;
+  onSearchChange: (v: string) => void;
+  onSourceChange: (v: string) => void;
+  onCounselorChange: (v: string) => void;
+  onCountryChange: (v: string) => void;
+  onPriorityChange: (v: string) => void;
+  onDateRangeChange: (v: DateRangeValue) => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -26,20 +33,39 @@ const FilterBar: React.FC<FilterBarProps> = ({
   clearFilters,
   hasFilters,
   onExport,
+  onSearchChange,
+  onSourceChange,
+  onCounselorChange,
+  onCountryChange,
+  onPriorityChange,
+  onDateRangeChange,
 }) => {
   const [showFilters, setShowFilters] = useState(true);
   const {
     control,
     formState: { errors },
-  } = useForm({});
+    reset,
+  } = useForm({
+    defaultValues: {
+      search: "",
+      source: "",
+      counselor: "",
+      country: "",
+      priority: "",
+      dateRange: null as DateRangeValue,
+    },
+  });
+
+  const handleClear = () => {
+    reset();
+    clearFilters();
+  };
 
   return (
     <div className="bg-white w-full rounded-2xl border border-slate-100 p-4">
       {/* Header */}
       <div
-        className={`flex w-full justify-between items-center ${
-          showFilters ? "mb-3.5" : ""
-        }`}
+        className={`flex w-full justify-between items-center ${showFilters ? "mb-3.5" : ""}`}
       >
         <div className="flex items-center gap-2.5">
           <button
@@ -51,16 +77,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
             Filters
             <RiArrowDownSLine
               size={14}
-              className={`transition-transform duration-200 ${
-                showFilters ? "rotate-180" : ""
-              }`}
+              className={`transition-transform duration-200 ${showFilters ? "rotate-180" : ""}`}
             />
           </button>
 
           {hasFilters && (
             <button
               type="button"
-              onClick={clearFilters}
+              onClick={handleClear}
               className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
             >
               <RiRefreshLine size={11} />
@@ -73,7 +97,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
           <span className="text-xs font-medium text-slate-400">
             {filteredCount} of {totalCount} leads
           </span>
-
           <button
             type="button"
             onClick={onExport}
@@ -86,11 +109,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
       </div>
 
       {/* Filters */}
-
       {showFilters && (
         <div className="flex w-full gap-2 items-end">
-          {" "}
-          {/* ← items-center → items-end */}
           <div className="flex-1 min-w-0">
             <CustomInput
               name="search"
@@ -98,6 +118,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
               placeholder="Search by name or phone…"
               control={control}
               icon={<RiSearchLine size={14} className="text-slate-400" />}
+              // Fire parent immediately on every keystroke
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onSearchChange(e.target.value)
+              }
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -108,6 +132,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
               control={control}
               errors={errors}
               options={SOURCES.map((s) => ({ value: s, label: s }))}
+              // Pass empty string when cleared (undefined → "")
+              onChange={(v: string) => onSourceChange(v ?? "")}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -118,6 +144,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
               control={control}
               errors={errors}
               options={COUNSELORS.map((c) => ({ value: c, label: c }))}
+              onChange={(v: string) => onCounselorChange(v ?? "")}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -128,6 +155,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
               control={control}
               errors={errors}
               options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+              onChange={(v: string) => onCountryChange(v ?? "")}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -138,14 +166,18 @@ const FilterBar: React.FC<FilterBarProps> = ({
               control={control}
               errors={errors}
               options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+              onChange={(v: string) => onPriorityChange(v ?? "")}
             />
           </div>
-          <div className="flex-[1.5] min-w-0">
+          <div className="flex-[1.8] min-w-0">
             <CustomDatePicker
+              mode="range"
               name="dateRange"
               label="Date Range"
+              placeholder={["Follow-up from", "Follow-up to"]}
               control={control}
               errors={errors}
+              onChange={(v) => onDateRangeChange(v ?? null)}
             />
           </div>
         </div>

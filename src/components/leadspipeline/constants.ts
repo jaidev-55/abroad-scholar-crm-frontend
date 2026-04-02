@@ -9,13 +9,13 @@ import {
 
 // LEAD SOURCES
 export const SOURCES = [
-  "Website",
-  "Referral",
-  "Facebook",
-  "Instagram",
-  "Walk-in",
-  "Google Ads",
-  "Education Fair",
+  "WEBSITE",
+  "REFERRAL",
+  "FACEBOOK",
+  "INSTAGRAM",
+  "WALK-IN",
+  "GOOGLE ADS",
+  "EDUCATION FAIR",
 ];
 
 // COUNSELORS

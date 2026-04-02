@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { message } from "antd";
+import { message, Spin } from "antd";
 import {
   PointerSensor,
   useSensor,
@@ -8,6 +8,7 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import LeadModal from "../../components/leadspipeline/LeadModal";
 import ViewLeadDrawer from "../../components/leadspipeline/drawers/ViewLeadDrawer";
@@ -23,16 +24,66 @@ import LeadNotesDrawer from "../../components/leadspipeline/pipeline/LeadNotesDr
 import ExportModal from "../../components/leadspipeline/export/ExportModal";
 import { STAGES } from "../../components/leadspipeline/constants";
 import type { Note, DateRangeValue, Lead } from "../../types/lead.types";
-import { LEADS_DATA } from "../../data/generateLeads";
+import {
+  getLeads,
+  updateLead,
+  type ApiLead,
+  type LeadStatus,
+} from "../../api/leads";
+
+function apiLeadToLocal(a: ApiLead): Lead {
+  const statusToStage: Record<string, string> = {
+    NEW: "new",
+    IN_PROGRESS: "progress",
+    CONVERTED: "converted",
+    LOST: "lost",
+  };
+
+  return {
+    id: a.id,
+    name: a.fullName,
+    phone: a.phone,
+    email: a.email ?? "",
+    country: a.country,
+    source: a.source,
+    status: a.status,
+    stage: statusToStage[a.status] ?? "new",
+    priority: (a.priority.charAt(0) +
+      a.priority.slice(1).toLowerCase()) as Lead["priority"],
+    counselor: a.counselor?.name ?? "",
+    followUp: a.followUpDate?.split("T")[0] ?? "",
+    ieltsScore: a.ieltsScore != null ? String(a.ieltsScore) : undefined,
+    notes: (a.notes ?? []).map((n) => ({
+      id: n.id,
+      text: n.content,
+      createdAt: n.createdAt,
+      author: a.counselor?.name ?? "Admin",
+    })),
+    createdAt: a.createdAt.split("T")[0],
+  };
+}
+
+// ─── Map local stage id → API LeadStatus ─────────────────────────────────────
+const STAGE_TO_STATUS: Record<string, LeadStatus> = {
+  new: "NEW",
+  progress: "IN_PROGRESS",
+  applied: "IN_PROGRESS",
+  converted: "CONVERTED",
+  lost: "LOST",
+};
 
 const LeadsPipeline: React.FC = () => {
-  const [leads, setLeads] = useState<Lead[]>(LEADS_DATA);
+  const queryClient = useQueryClient();
+
+  // ── Filter state ──────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [counselorFilter, setCounselorFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
+
+  // ── Modal / drawer state ──────────────────────────────────────────────────
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDefaultStage, setAddModalDefaultStage] = useState<string>();
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -42,6 +93,8 @@ const LeadsPipeline: React.FC = () => {
   const [editDrawerLead, setEditDrawerLead] = useState<Lead | null>(null);
   const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
   const [emailModalLead, setEmailModalLead] = useState<Lead | null>(null);
+
+  // ── DnD state ─────────────────────────────────────────────────────────────
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStageId, setOverStageId] = useState<string | null>(null);
 
@@ -49,83 +102,117 @@ const LeadsPipeline: React.FC = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  //  FILTER LOGIC
-
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      if (
-        search &&
-        !lead.name.toLowerCase().includes(search.toLowerCase()) &&
-        !lead.phone.includes(search)
-      )
-        return false;
-
-      if (sourceFilter && lead.source !== sourceFilter) return false;
-      if (counselorFilter && lead.counselor !== counselorFilter) return false;
-      if (countryFilter && lead.country !== countryFilter) return false;
-      if (priorityFilter && lead.priority !== priorityFilter) return false;
-
-      if (
-        dateRange &&
-        dateRange[0] &&
-        lead.followUp &&
-        lead.followUp < dateRange[0].format("YYYY-MM-DD")
-      )
-        return false;
-
-      if (
-        dateRange &&
-        dateRange[1] &&
-        lead.followUp &&
-        lead.followUp > dateRange[1].format("YYYY-MM-DD")
-      )
-        return false;
-
-      return true;
-    });
-  }, [
-    leads,
+  // ── Build a stable query key from all active filters ─────────────────────
+  const queryKey = [
+    "leads",
     search,
     sourceFilter,
     counselorFilter,
     countryFilter,
     priorityFilter,
-    dateRange,
-  ]);
+    dateRange?.[0]?.format("YYYY-MM-DD") ?? null,
+    dateRange?.[1]?.format("YYYY-MM-DD") ?? null,
+  ] as const;
 
-  const handleDragStart = (e: DragStartEvent) => {
-    setActiveId(e.active.id as string);
-  };
+  // ── Fetch leads from API ──────────────────────────────────────────────────
+  const {
+    data: rawLeads = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey,
+    queryFn: () =>
+      getLeads({
+        search: search || undefined,
+        source: sourceFilter || undefined,
+        country: countryFilter || undefined,
+        // API expects uppercase priority values
+        priority: priorityFilter ? priorityFilter.toUpperCase() : undefined,
+        followUpFrom: dateRange?.[0]?.format("YYYY-MM-DD"),
+        followUpTo: dateRange?.[1]?.format("YYYY-MM-DD"),
+      }),
+    // Keep previous data visible while new results load (prevents board flicker)
+    placeholderData: (prev) => prev,
+  });
 
+  // Convert API shape → local shape once per fetch
+  const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
+
+  // ── Counselor filter is client-side (API takes counselorId, not name) ─────
+  const filteredLeads = useMemo(() => {
+    if (!counselorFilter) return leads;
+    return leads.filter((l) => l.counselor === counselorFilter);
+  }, [leads, counselorFilter]);
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split("T")[0];
-
     return {
-      // Total number of leads
       total: leads.length,
-
-      // Leads created today
       newToday: leads.filter((l) => l.createdAt === today).length,
-
-      // Leads whose follow-up date is today or overdue
       followUpsDue: leads.filter((l) => l.followUp && l.followUp <= today)
         .length,
-
-      // Leads successfully converted
       converted: leads.filter((l) => l.stage === "converted").length,
-
-      // Leads marked as lost
       lost: leads.filter((l) => l.stage === "lost").length,
     };
   }, [leads]);
+
+  // ── Mutation: move lead to a new stage (drag-and-drop) ────────────────────
+  const { mutate: moveLeadMutation } = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: LeadStatus }) =>
+      updateLead(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      message.success("Lead moved successfully!");
+    },
+    onError: (error: unknown) => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      console.error("Move lead error:", error);
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
+      console.error("Response:", axiosError?.response?.data);
+      message.error(
+        axiosError?.response?.data?.message ||
+          "Failed to move lead. Please try again.",
+      );
+    },
+  });
+
+  // ── Mutation: mark lead as lost ───────────────────────────────────────────
+  const { mutate: markLostMutation } = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      updateLead(id, { status: "LOST", lostReason: reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: () => {
+      message.error("Failed to mark lead as lost. Please try again.");
+    },
+  });
+
+  // ── Mutation: add a note ──────────────────────────────────────────────────
+  const { mutate: addNoteMutation } = useMutation({
+    mutationFn: ({ id, text }: { id: string; text: string }) =>
+      updateLead(id, { notes: [{ content: text }] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: () => {
+      message.error("Failed to save note. Please try again.");
+    },
+  });
+
+  // ── DnD handlers ──────────────────────────────────────────────────────────
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(e.active.id as string);
+  };
 
   const handleDragOver = (e: DragOverEvent) => {
     const { over } = e;
     if (!over) return;
 
     const overId = over.id as string;
-
     const stage = STAGES.find((s) => s.id === overId);
     if (stage) {
       setOverStageId(stage.id);
@@ -137,52 +224,66 @@ const LeadsPipeline: React.FC = () => {
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
-
     setActiveId(null);
     setOverStageId(null);
 
     if (!over) return;
 
     const overId = over.id as string;
-
     const stage = STAGES.find((s) => s.id === overId);
     const leadOver = leads.find((l) => l.id === overId);
-
-    const newStage = stage?.id || leadOver?.stage;
+    const newStage = stage?.id ?? leadOver?.stage;
     if (!newStage) return;
 
-    setLeads((prev) =>
-      prev.map((l) => (l.id === active.id ? { ...l, stage: newStage } : l)),
+    const movingLead = leads.find((l) => l.id === active.id);
+    if (!movingLead || movingLead.stage === newStage) return;
+
+    const newStatus = STAGE_TO_STATUS[newStage];
+    if (!newStatus) return;
+
+    // If dragging to "lost", open the reason modal instead of moving directly
+    if (newStage === "lost") {
+      setLostModalLead(movingLead);
+      return;
+    }
+
+    // Optimistically update the cache so the board reflects the move instantly
+    queryClient.setQueryData<ApiLead[]>(
+      queryKey,
+      (old) =>
+        old?.map((l) =>
+          l.id === active.id ? { ...l, status: newStatus } : l,
+        ) ?? [],
     );
 
-    message.success("Lead moved successfully!");
+    moveLeadMutation({ id: active.id as string, status: newStatus });
   };
 
+  // ── Note handler ─────────────────────────────────────────────────────────
   const handleAddNote = (leadId: string, text: string) => {
-    const newNote: Note = {
-      id: `note-${Date.now()}`,
-      text,
-      createdAt: new Date().toISOString(),
-      author: "Priya Sharma",
-    };
+    // Immediately reflect the new note in the open drawer (no flicker)
+    if (notesDrawerLead?.id === leadId) {
+      const optimisticNote: Note = {
+        id: `note-optimistic-${Date.now()}`,
+        text,
+        createdAt: new Date().toISOString(),
+        author: notesDrawerLead.counselor || "Admin",
+      };
+      setNotesDrawerLead((prev) =>
+        prev ? { ...prev, notes: [...prev.notes, optimisticNote] } : prev,
+      );
+    }
 
-    setLeads((prev) =>
-      prev.map((l) =>
-        l.id === leadId ? { ...l, notes: [...l.notes, newNote] } : l,
-      ),
-    );
+    addNoteMutation({ id: leadId, text });
   };
 
-  const handleSaveLost = (leadId: string) => {
-    setLeads((prev) => prev.filter((l) => l.id !== leadId));
+  // ── Lost lead handler ─────────────────────────────────────────────────────
+  const handleSaveLost = (leadId: string, reason: string) => {
+    markLostMutation({ id: leadId, reason });
   };
 
-  const handleSaveLead = (newLead: Lead) => {
-    const withStage = addModalDefaultStage
-      ? { ...newLead, stage: addModalDefaultStage }
-      : newLead;
-
-    setLeads((prev) => [withStage, ...prev]);
+  const handleSaveLead = () => {
+    queryClient.invalidateQueries({ queryKey: ["leads"] });
     setAddModalOpen(false);
     setAddModalDefaultStage(undefined);
   };
@@ -196,13 +297,25 @@ const LeadsPipeline: React.FC = () => {
     setDateRange(null);
   };
 
-  const hasFilters =
+  const hasFilters = !!(
     search ||
     sourceFilter ||
     counselorFilter ||
     countryFilter ||
     priorityFilter ||
-    dateRange;
+    dateRange
+  );
+
+  // ── Error state ───────────────────────────────────────────────────────────
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-full py-32 text-slate-400">
+        <p className="text-sm">
+          Failed to load leads. Please refresh and try again.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -220,34 +333,60 @@ const LeadsPipeline: React.FC = () => {
           filteredCount={filteredLeads.length}
           totalCount={leads.length}
           clearFilters={clearFilters}
-          hasFilters={!!hasFilters}
+          hasFilters={hasFilters}
           onExport={() => setExportModalOpen(true)}
+          onSearchChange={setSearch}
+          onSourceChange={setSourceFilter}
+          onCounselorChange={setCounselorFilter}
+          onCountryChange={setCountryFilter}
+          onPriorityChange={setPriorityFilter}
+          onDateRangeChange={setDateRange}
         />
 
-        <PipelineBoard
-          leads={filteredLeads}
-          dnd={{
-            sensors,
-            activeId,
-            overStageId,
-            handleDragStart,
-            handleDragOver,
-            handleDragEnd,
-          }}
-          actionHandlers={{
-            onMarkLost: setLostModalLead,
-            onMoveTo: () => {},
-            onViewNotes: setNotesDrawerLead,
-            onView: setViewDrawerLead,
-            onEdit: setEditDrawerLead,
-            onCall: setCallModalLead,
-            onEmail: setEmailModalLead,
-          }}
-          onAddToStage={(stageId) => {
-            setAddModalDefaultStage(stageId);
-            setAddModalOpen(true);
-          }}
-        />
+        {/* Board wrapped in a relative container for the loading overlay */}
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center pt-24 bg-white/60 rounded-2xl backdrop-blur-[2px]">
+              <Spin size="large" tip="Loading leads…" />
+            </div>
+          )}
+
+          <PipelineBoard
+            leads={filteredLeads}
+            dnd={{
+              sensors,
+              activeId,
+              overStageId,
+              handleDragStart,
+              handleDragOver,
+              handleDragEnd,
+            }}
+            actionHandlers={{
+              onMarkLost: setLostModalLead,
+              onMoveTo: (leadId: string, stageId: string) => {
+                const newStatus = STAGE_TO_STATUS[stageId];
+                if (!newStatus) return;
+                queryClient.setQueryData<ApiLead[]>(
+                  queryKey,
+                  (old) =>
+                    old?.map((l) =>
+                      l.id === leadId ? { ...l, status: newStatus } : l,
+                    ) ?? [],
+                );
+                moveLeadMutation({ id: leadId, status: newStatus });
+              },
+              onViewNotes: setNotesDrawerLead,
+              onView: setViewDrawerLead,
+              onEdit: setEditDrawerLead,
+              onCall: setCallModalLead,
+              onEmail: setEmailModalLead,
+            }}
+            onAddToStage={(stageId) => {
+              setAddModalDefaultStage(stageId);
+              setAddModalOpen(true);
+            }}
+          />
+        </div>
       </div>
 
       <LeadModal
@@ -289,8 +428,9 @@ const LeadsPipeline: React.FC = () => {
       <EditLeadDrawer
         lead={editDrawerLead}
         onClose={() => setEditDrawerLead(null)}
-        onSave={function (): void {
-          throw new Error("Function not implemented.");
+        onSave={() => {
+          queryClient.invalidateQueries({ queryKey: ["leads"] });
+          setEditDrawerLead(null);
         }}
       />
 
