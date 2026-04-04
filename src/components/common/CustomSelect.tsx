@@ -64,7 +64,9 @@ const CustomSelect = <T extends FieldValues>({
                 size={size}
                 onChange={(v) => {
                   field.onChange(v);
-                  onChange?.(v);
+                  if (v !== undefined) {
+                    onChange?.(v);
+                  }
                 }}
                 style={{ paddingLeft: icon ? 28 : undefined }}
                 status={errors[name] ? "error" : undefined}

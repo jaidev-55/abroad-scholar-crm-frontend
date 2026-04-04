@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { Table, ConfigProvider, Empty, Tooltip, Input, Select } from "antd";
+import { Table, Empty, Tooltip, Input, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useForm } from "react-hook-form";
 import {
@@ -31,9 +31,6 @@ import {
   RiEyeLine,
   RiArrowUpSLine,
   RiArrowDownSLine,
-  RiAlertLine,
-  RiTimerLine,
-  RiUserHeartLine,
 } from "react-icons/ri";
 import type { IconType } from "react-icons";
 import CustomSelect from "../../components/common/CustomSelect";
@@ -620,6 +617,7 @@ const MiniDonut: React.FC<MiniDonutProps> = ({ data, size = 52 }) => {
       {data.map((d, i) => {
         const pct = total > 0 ? d.value / total : 0;
         const offset = cumulative * circumference;
+        // eslint-disable-next-line react-hooks/immutability
         cumulative += pct;
         return (
           <circle
@@ -1069,7 +1067,7 @@ const LostLeadDrawer: React.FC<LostLeadDrawerProps> = ({
                       </span>
                     </div>
                     <div className="text-[13px] font-bold text-slate-800">
-                      {item.isBadge ? (
+                      {item.icon ? (
                         <StageBadge stageId={item.value as StageId} />
                       ) : (
                         item.value
@@ -1326,6 +1324,7 @@ const LostLeadsPage: React.FC = () => {
 
   // ─── Handlers ───
   const handleReactivate = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (leadId: string, _reason: string, _notes: string) => {
       setLeads((prev) => prev.filter((l) => l.id !== leadId));
     },

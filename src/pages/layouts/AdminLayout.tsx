@@ -4,22 +4,22 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
-  RiDashboardLine,
+  // RiDashboardLine,
   RiKanbanView,
   RiUser3Line,
-  RiUserFollowLine,
-  RiUserUnfollowLine,
-  RiUserSettingsLine,
-  RiTaskLine,
-  RiBarChartLine,
-  RiFileTextLine,
-  RiVisaLine,
-  RiGraduationCapLine,
+  // RiUserFollowLine,
+  // RiUserUnfollowLine,
+  // RiUserSettingsLine,
+  // RiTaskLine,
+  // RiBarChartLine,
+  // RiFileTextLine,
+  // RiVisaLine,
+  // RiGraduationCapLine,
   RiLineChartLine,
   RiSettings3Line,
   RiLockPasswordLine,
   RiProfileLine,
-  RiTeamLine,
+  // RiTeamLine,
 } from "react-icons/ri";
 import {
   AiOutlineMenu,
@@ -62,12 +62,12 @@ const AdminLayout = () => {
 
   const menuItems = [
     // ───── MAIN ─────
-    {
-      id: "dashboard",
-      icon: RiDashboardLine,
-      label: "Dashboard",
-      href: "/admin/dashboard",
-    },
+    // {
+    //   id: "dashboard",
+    //   icon: RiDashboardLine,
+    //   label: "Dashboard",
+    //   href: "/admin/dashboard",
+    // },
     {
       id: "pipeline",
       icon: RiKanbanView,
@@ -82,76 +82,76 @@ const AdminLayout = () => {
     },
 
     // ───── LEAD MANAGEMENT ─────
-    {
-      id: "followups",
-      icon: RiUserFollowLine,
-      label: "Follow-ups",
-      href: "/admin/follow-ups",
-    },
-    {
-      id: "lost-leads",
-      icon: RiUserUnfollowLine,
-      label: "Lost Leads",
-      href: "/admin/lost-leads",
-    },
-    {
-      id: "lead-sources",
-      icon: RiBarChartLine,
-      label: "Lead Sources",
-      href: "/admin/lead-sources",
-    },
+    // {
+    //   id: "followups",
+    //   icon: RiUserFollowLine,
+    //   label: "Follow-ups",
+    //   href: "/admin/follow-ups",
+    // },
+    // {
+    //   id: "lost-leads",
+    //   icon: RiUserUnfollowLine,
+    //   label: "Lost Leads",
+    //   href: "/admin/lost-leads",
+    // },
+    // {
+    //   id: "lead-sources",
+    //   icon: RiBarChartLine,
+    //   label: "Lead Sources",
+    //   href: "/admin/lead-sources",
+    // },
 
     // ───── TEAM MANAGEMENT ─────
-    {
-      id: "users",
-      icon: RiTeamLine,
-      label: "Users",
-      href: "/admin/users",
-    },
-    {
-      id: "counselors",
-      icon: RiUserSettingsLine,
-      label: "Counselors",
-      href: "/admin/counselors",
-    },
-    {
-      id: "tasks",
-      icon: RiTaskLine,
-      label: "Tasks",
-      href: "/admin/tasks",
-    },
-    {
-      id: "performance",
-      icon: RiLineChartLine,
-      label: "Performance",
-      href: "/admin/performance",
-    },
+    // {
+    //   id: "users",
+    //   icon: RiTeamLine,
+    //   label: "Users",
+    //   href: "/admin/users",
+    // },
+    // {
+    //   id: "counselors",
+    //   icon: RiUserSettingsLine,
+    //   label: "Counselors",
+    //   href: "/admin/counselors",
+    // },
+    // {
+    //   id: "tasks",
+    //   icon: RiTaskLine,
+    //   label: "Tasks",
+    //   href: "/admin/tasks",
+    // },
+    // {
+    //   id: "performance",
+    //   icon: RiLineChartLine,
+    //   label: "Performance",
+    //   href: "/admin/performance",
+    // },
 
     // ───── STUDENT PROCESS ─────
-    {
-      id: "ielts",
-      icon: RiFileTextLine,
-      label: "IELTS Tracking",
-      href: "/admin/ielts",
-    },
-    {
-      id: "applications",
-      icon: RiFileTextLine,
-      label: "Applications",
-      href: "/admin/applications",
-    },
-    {
-      id: "visa",
-      icon: RiVisaLine,
-      label: "Visa Processing",
-      href: "/admin/visa",
-    },
-    {
-      id: "enrolled",
-      icon: RiGraduationCapLine,
-      label: "Enrolled Students",
-      href: "/admin/enrolled",
-    },
+    // {
+    //   id: "ielts",
+    //   icon: RiFileTextLine,
+    //   label: "IELTS Tracking",
+    //   href: "/admin/ielts",
+    // },
+    // {
+    //   id: "applications",
+    //   icon: RiFileTextLine,
+    //   label: "Applications",
+    //   href: "/admin/applications",
+    // },
+    // {
+    //   id: "visa",
+    //   icon: RiVisaLine,
+    //   label: "Visa Processing",
+    //   href: "/admin/visa",
+    // },
+    // {
+    //   id: "enrolled",
+    //   icon: RiGraduationCapLine,
+    //   label: "Enrolled Students",
+    //   href: "/admin/enrolled",
+    // },
 
     // ───── SETTINGS ─────
     {
@@ -160,24 +160,24 @@ const AdminLayout = () => {
       label: "Ad Integration",
       href: "/admin/ad-integration",
     },
-    {
-      id: "settings",
-      icon: RiSettings3Line,
-      label: "System Settings",
-      href: "/admin/settings",
-    },
+    // {
+    //   id: "settings",
+    //   icon: RiSettings3Line,
+    //   label: "System Settings",
+    //   href: "/admin/settings",
+    // },
     {
       id: "profile",
       icon: RiProfileLine,
       label: "My Profile",
       href: "/admin/my-profile",
     },
-    {
-      id: "change-password",
-      icon: RiLockPasswordLine,
-      label: "Change Password",
-      href: "/admin/change-password",
-    },
+    // {
+    //   id: "change-password",
+    //   icon: RiLockPasswordLine,
+    //   label: "Change Password",
+    //   href: "/admin/change-password",
+    // },
   ];
 
   useEffect(() => {

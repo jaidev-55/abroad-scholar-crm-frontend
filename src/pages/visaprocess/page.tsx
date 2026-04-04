@@ -5,7 +5,6 @@ import {
   Input,
   Select,
   Button,
-  Badge,
   Tooltip,
   Progress,
   message,
@@ -31,7 +30,6 @@ import {
   FiX,
   FiUser,
   FiMail,
-  FiGlobe,
   FiBookOpen,
   FiCalendar,
   FiArrowRight,
@@ -521,6 +519,7 @@ const VisaProcessingPage = () => {
     if (counselorFilter)
       result = result.filter((c) => c.counselor === counselorFilter);
     if (intakeFilter) result = result.filter((c) => c.intake === intakeFilter);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFiltered(result);
   }, [
     searchText,

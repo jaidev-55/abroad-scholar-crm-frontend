@@ -59,10 +59,6 @@ interface Task {
   createdBy: string;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════
-
 const COUNSELORS = [
   "Priya Sharma",
   "Arjun Patel",
@@ -460,8 +456,6 @@ const TaskModal: React.FC<{
             name="dueDate"
             label="Due Date & Time"
             placeholder="Pick date & time"
-            showTime
-            required
             control={control}
             errors={errors}
             rules={{ required: "Due date is required" }}

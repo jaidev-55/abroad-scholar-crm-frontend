@@ -21,7 +21,7 @@ interface SingleProps<T extends FieldValues> {
   placeholder?: string;
   control: Control<T>;
   errors?: FieldErrors<T>;
-  rules?: RegisterOptions;
+  rules?: RegisterOptions<T, Path<T>>;
   onChange?: (v: Dayjs | null) => void;
 }
 
@@ -32,7 +32,7 @@ interface RangeProps<T extends FieldValues> {
   placeholder?: [string, string];
   control: Control<T>;
   errors?: FieldErrors<T>;
-  rules?: RegisterOptions;
+  rules?: RegisterOptions<T, Path<T>>;
   onChange?: (v: RangeValue) => void;
 }
 
