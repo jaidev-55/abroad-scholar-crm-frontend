@@ -102,6 +102,9 @@ const AdIntegrationPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["webhook-configs"] }),
   });
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const GOOGLE_TOKEN = import.meta.env.VITE_GOOGLE_WEBHOOK_TOKEN;
+
   const deleteMutation = useMutation({
     mutationFn: deleteConfig,
     onSuccess: () =>
@@ -120,7 +123,7 @@ const AdIntegrationPage: React.FC = () => {
       title: "Platform",
       dataIndex: "platform",
       key: "platform",
-      width: 140,
+      width: 200,
       render: (platform: string) => {
         const config = platformConfig[platform];
         if (!config) return platform;
@@ -151,8 +154,10 @@ const AdIntegrationPage: React.FC = () => {
       title: "Form Name",
       dataIndex: "formName",
       key: "formName",
+      width: 200,
+      align: "center",
       render: (name: string) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <RiFileListLine size={14} className="text-slate-400 shrink-0" />
           <span className="font-medium text-slate-700 text-sm">{name}</span>
         </div>
@@ -162,20 +167,27 @@ const AdIntegrationPage: React.FC = () => {
       title: "Form ID",
       dataIndex: "formId",
       key: "formId",
+      width: 200,
+      align: "center",
       render: (id: string) => (
         <Tooltip title="Click to copy" placement="top">
-          <button
-            onClick={() => navigator.clipboard.writeText(id)}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer group"
-          >
-            <RiLinkM
-              size={12}
-              className="text-slate-400 group-hover:text-blue-500 transition-colors"
-            />
-            <code className="text-xs text-slate-600 font-mono">
-              {id.length > 20 ? `${id.slice(0, 20)}...` : id}
-            </code>
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(id);
+                message.success("Form ID copied!");
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer group"
+            >
+              <RiLinkM
+                size={12}
+                className="text-slate-400 group-hover:text-blue-500 transition-colors"
+              />
+              <code className="text-xs text-slate-600 font-mono">
+                {id.length > 20 ? `${id.slice(0, 20)}...` : id}
+              </code>
+            </button>
+          </div>
         </Tooltip>
       ),
     },
@@ -212,6 +224,8 @@ const AdIntegrationPage: React.FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 140,
+
+      align: "center",
       render: (date: string) => (
         <span className="text-xs text-slate-500">
           {new Date(date).toLocaleDateString("en-US", {
@@ -225,26 +239,28 @@ const AdIntegrationPage: React.FC = () => {
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
     {
-      title: "",
+      title: "Action",
       key: "actions",
       width: 60,
       align: "center",
       render: (_: unknown, record: WebhookConfig) => (
-        <Popconfirm
-          title="Remove this form?"
-          description="Leads from this form will no longer sync to CRM."
-          onConfirm={() => deleteMutation.mutate(record.id)}
-          okText="Remove"
-          cancelText="Cancel"
-          okButtonProps={{
-            danger: true,
-            loading: deleteMutation.isPending,
-          }}
-        >
-          <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all cursor-pointer">
-            <RiDeleteBinLine size={16} />
-          </button>
-        </Popconfirm>
+        <div className="flex justify-center">
+          <Popconfirm
+            title="Remove this form?"
+            description="Leads from this form will no longer sync to CRM."
+            onConfirm={() => deleteMutation.mutate(record.id)}
+            okText="Remove"
+            cancelText="Cancel"
+            okButtonProps={{
+              danger: true,
+              loading: deleteMutation.isPending,
+            }}
+          >
+            <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all cursor-pointer">
+              <RiDeleteBinLine size={16} />
+            </button>
+          </Popconfirm>
+        </div>
       ),
     },
   ];
@@ -444,12 +460,12 @@ const AdIntegrationPage: React.FC = () => {
             {
               platform: "META",
               label: "Meta Webhook URL",
-              url: `${window.location.origin.replace("localhost:5173", "api.abroadscholars.in")}/webhooks/meta`,
+              url: `${API_BASE}/webhooks/meta`,
             },
             {
               platform: "GOOGLE",
               label: "Google Webhook URL",
-              url: `${window.location.origin.replace("localhost:5173", "api.abroadscholars.in")}/webhooks/google?token=abroad_scholars_123`,
+              url: `${API_BASE}/webhooks/google?token=${GOOGLE_TOKEN}`,
             },
           ].map((item) => {
             const config = platformConfig[item.platform];
