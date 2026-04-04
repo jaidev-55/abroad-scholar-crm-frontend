@@ -24,10 +24,11 @@ jobs:
             cd /home/deployer/abroad-scholar-frontend
             git pull origin main
 
-            sudo docker build -t abroad-scholar-frontend .
-            sudo docker stop frontend || true
-            sudo docker rm frontend || true
-            sudo docker run -d \
+            docker stop frontend || true
+            docker rm frontend || true
+            docker rmi -f abroad-scholar-frontend || true
+            docker build --no-cache -t abroad-scholar-frontend /home/deployer/abroad-scholar-frontend
+            docker run -d \
               --name frontend \
               --restart always \
               -p 3000:80 \

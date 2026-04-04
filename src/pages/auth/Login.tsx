@@ -20,7 +20,7 @@ const LoginPage = () => {
             localStorage.setItem("access_token", res.access_token);
           if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
           message.success("Welcome back!");
-          navigate("/leads-pipeline");
+          navigate("/admin/leads-pipeline");
         },
         onError: (err) => {
           message.error(err?.message || "Invalid email or password");
