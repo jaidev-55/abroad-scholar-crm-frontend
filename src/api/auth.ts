@@ -127,3 +127,75 @@ export const resetPassword = async (
   );
   return data;
 };
+
+// ─── Get Users ────────────────────────────────────────
+export interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}
+
+export const getUsers = async (role?: string): Promise<ApiUser[]> => {
+  const { data } = await axiosInstance.get<ApiUser[]>("/auth/users", {
+    params: role ? { role } : undefined,
+  });
+  return data;
+};
+
+// ─── Get Current User ─────────────────────────────────
+export interface CurrentUser {
+  id: string;
+  email: string;
+  role: string;
+  name?: string;
+}
+
+export const getCurrentUser = async (): Promise<CurrentUser> => {
+  const { data } = await axiosInstance.get<CurrentUser>("/auth/me");
+  return data;
+};
+
+// ─── Update User (self — name + email only) ───────────
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+}
+
+export interface UpdateUserResponse {
+  message: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
+export const updateUser = async (
+  _id: string,
+  payload: UpdateUserPayload,
+): Promise<UpdateUserResponse> => {
+  const { data } = await axiosInstance.patch<UpdateUserResponse>(
+    "/auth/profile", //
+    { name: payload.name, email: payload.email },
+  );
+  return data;
+};
+
+// ─── Change Password (authenticated, no OTP) ──────────
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = async (
+  payload: ChangePasswordPayload,
+): Promise<{ message: string }> => {
+  const { data } = await axiosInstance.patch<{ message: string }>(
+    "/auth/change-password",
+    payload,
+  );
+  return data;
+};

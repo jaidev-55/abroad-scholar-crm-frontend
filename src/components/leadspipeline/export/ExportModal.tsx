@@ -8,7 +8,7 @@ import {
   RiFilePdfLine,
   RiLeafLine,
 } from "react-icons/ri";
-import type { Lead } from "../../../types/lead.types";
+import type { Lead } from "../../../types/lead";
 
 type ExportFormat = "csv" | "pdf";
 type ExportScope = "filtered" | "all";

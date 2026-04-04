@@ -15,7 +15,7 @@ import {
   RiStickyNoteLine,
   RiUserSmileLine,
 } from "react-icons/ri";
-import type { Lead } from "../../../types/lead.types";
+import type { Lead } from "../../../types/lead";
 import PriorityBadge from "../../common/badges/PriorityBadge";
 import SourceBadge from "../../common/badges/SourceBadge";
 import { STAGES } from "../constants";

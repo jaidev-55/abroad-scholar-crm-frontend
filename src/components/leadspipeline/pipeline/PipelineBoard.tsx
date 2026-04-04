@@ -7,7 +7,7 @@ import type {
   DragEndEvent,
   DragOverEvent,
 } from "@dnd-kit/core";
-import type { Lead } from "../../../types/lead.types";
+import type { Lead } from "../../../types/lead";
 import { STAGES } from "../constants";
 import KanbanColumn from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
@@ -33,6 +33,23 @@ interface PipelineBoardProps {
   };
   onAddToStage: (stageId: string) => void;
 }
+
+// ✅ Check if a date string is today
+const isTodayDate = (dateStr?: string): boolean => {
+  if (!dateStr) return false;
+  return new Date(dateStr).toDateString() === new Date().toDateString();
+};
+
+// ✅ Filter leads per stage — converted & lost show today only
+const getLeadsForStage = (leads: Lead[], stageId: string): Lead[] => {
+  const stagLeads = leads.filter((l) => l.stage === stageId);
+
+  if (stageId === "converted" || stageId === "lost") {
+    return stagLeads.filter((l) => isTodayDate(l.updatedAt ?? l.createdAt));
+  }
+
+  return stagLeads;
+};
 
 const PipelineBoard: React.FC<PipelineBoardProps> = ({
   leads,
@@ -62,7 +79,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
           <KanbanColumn
             key={stage.id}
             stage={stage}
-            leads={leads.filter((l) => l.stage === stage.id)}
+            leads={getLeadsForStage(leads, stage.id)} // ✅ filtered per stage
             isOver={overStageId === stage.id}
             onAddToStage={onAddToStage}
             onMarkLost={actionHandlers.onMarkLost}

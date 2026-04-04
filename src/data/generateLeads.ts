@@ -1,4 +1,4 @@
-import type { Lead } from "../types/lead.types";
+import type { Lead } from "../types/lead";
 
 const NAMES = [
   "Aarav Mehta",

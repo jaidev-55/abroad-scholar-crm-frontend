@@ -1,6 +1,7 @@
 import React from "react";
-import { Drawer, ConfigProvider } from "antd";
+import { Drawer, ConfigProvider, Spin, message } from "antd";
 import { useForm, FormProvider, Controller } from "react-hook-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   RiPencilLine,
   RiCloseLine,
@@ -8,6 +9,7 @@ import {
   RiUserLine,
   RiPhoneLine,
   RiMailLine,
+  RiLoader4Line,
 } from "react-icons/ri";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
@@ -15,14 +17,42 @@ import type { Dayjs } from "dayjs";
 import CustomInput from "../../common/CustomInput";
 import CustomSelect from "../../common/CustomSelect";
 import CustomDatePicker from "../../common/CustomDatePicker";
-import type { FormValues, Lead } from "../../../types/lead.types";
-import { COUNSELORS, COUNTRIES, SOURCES, STAGES } from "../constants";
+import type { Lead } from "../../../types/lead";
+import { COUNTRIES, SOURCES, STAGES } from "../constants"; // ✅ removed COUNSELORS
+import { updateLead, type UpdateLeadPayload } from "../../../api/leads";
+import { getUsers } from "../../../api/auth"; // ✅ real API
+
+interface EditFormValues {
+  name: string;
+  phone: string;
+  email: string;
+  stage: string;
+  source: string;
+  counselor: string;
+  country: string;
+  priority: "Hot" | "Warm" | "Cold";
+  followUp: Dayjs | null;
+  ieltsScore: string;
+}
 
 interface Props {
   lead: Lead | null;
   onClose: () => void;
   onSave: (updated: Lead) => void;
 }
+
+const STAGE_TO_STATUS: Record<string, string> = {
+  new: "NEW",
+  progress: "IN_PROGRESS",
+  converted: "CONVERTED",
+  lost: "LOST",
+};
+
+const PRIORITY_TO_API: Record<string, string> = {
+  Hot: "HOT",
+  Warm: "WARM",
+  Cold: "COLD",
+};
 
 const Field: React.FC<{
   label: string;
@@ -118,7 +148,55 @@ const StagePicker: React.FC<{
 );
 
 const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
-  const methods = useForm<FormValues>({
+  const queryClient = useQueryClient();
+
+  // ── Fetch real counselors ─────────────────────────
+  const { data: counselorUsers = [], isLoading: counselorsLoading } = useQuery({
+    queryKey: ["counselors"],
+    queryFn: () => getUsers("COUNSELOR"),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!lead, // only fetch when drawer is open
+  });
+
+  const counselorOptions = counselorUsers.map((u) => ({
+    value: u.name,
+    label: (
+      <div className="flex items-center gap-2">
+        <div
+          className="w-5 h-5 rounded-md bg-blue-50 text-blue-500 font-bold flex items-center justify-center shrink-0"
+          style={{ fontSize: 9 }}
+        >
+          {u.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .slice(0, 2)}
+        </div>
+        <span>{u.name}</span>
+      </div>
+    ),
+  }));
+
+  const { mutate: updateLeadMutation, isPending } = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateLeadPayload }) =>
+      updateLead(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-activity", lead?.id] });
+      message.success("Lead updated successfully!");
+      onSave(lead!);
+    },
+    onError: (error: unknown) => {
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
+      message.error(
+        axiosError?.response?.data?.message || "Failed to update lead.",
+      );
+    },
+  });
+
+  const methods = useForm<EditFormValues>({
     values: lead
       ? {
           name: lead.name,
@@ -135,18 +213,26 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
       : undefined,
   });
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = (data: EditFormValues) => {
     if (!lead) return;
-
-    onSave({
-      ...lead,
-      ...data,
-      followUp: data.followUp
-        ? (data.followUp as Dayjs).format("YYYY-MM-DD")
-        : lead.followUp,
-      ieltsScore: data.ieltsScore || null,
+    updateLeadMutation({
+      id: lead.id,
+      payload: {
+        fullName: data.name?.trim(),
+        phone: data.phone?.trim(),
+        email: data.email?.trim() || undefined,
+        country: data.country,
+        source: data.source,
+        status: STAGE_TO_STATUS[data.stage] as UpdateLeadPayload["status"],
+        priority: PRIORITY_TO_API[
+          data.priority
+        ] as UpdateLeadPayload["priority"],
+        followUpDate: data.followUp
+          ? data.followUp.format("YYYY-MM-DD")
+          : undefined,
+        ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
+      },
     });
-    onClose();
   };
 
   const {
@@ -154,6 +240,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
     control,
     formState: { isDirty, errors },
   } = methods;
+
   if (!lead) return null;
 
   return (
@@ -212,14 +299,13 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
             </div>
 
             {/* ── BODY ── */}
-            <div className=" flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
-              {/* Personal Info card */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
+              {/* Personal Info */}
               <div className="bg-white shadow rounded-2xl border border-slate-100 p-4 flex flex-col gap-4">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Personal Info
                 </p>
 
-                {/* CustomInput uses useFormContext internally */}
                 <CustomInput
                   name="name"
                   label="Full Name"
@@ -274,13 +360,12 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                 </div>
               </div>
 
-              {/* Classification card */}
+              {/* Classification */}
               <div className="bg-white shadow rounded-2xl border border-slate-100 p-4 flex flex-col gap-4">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Classification
                 </p>
 
-                {/* Stage — custom button grid, use Controller directly */}
                 <Controller
                   name="stage"
                   control={control}
@@ -294,7 +379,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                   )}
                 />
 
-                {/* Priority — custom button row, use Controller directly */}
                 <Controller
                   name="priority"
                   control={control}
@@ -309,32 +393,28 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                 />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <CustomSelect
-                    name="counselor"
-                    label="Assign Counselor"
-                    placeholder="Assign to…"
-                    control={control}
-                    errors={errors}
-                    options={COUNSELORS.map((c) => ({
-                      value: c,
-                      label: (
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-5 h-5 rounded-md bg-blue-50 text-blue-500 font-bold flex items-center justify-center shrink-0"
-                            style={{ fontSize: 9 }}
-                          >
-                            {c
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </div>
-                          <span>{c}</span>
-                        </div>
-                      ),
-                    }))}
-                  />
+                  {/* ✅ Real counselors from API */}
+                  <div className="relative">
+                    <CustomSelect
+                      name="counselor"
+                      label="Assign Counselor"
+                      placeholder={
+                        counselorsLoading ? "Loading…" : "Assign to…"
+                      }
+                      control={control}
+                      errors={errors}
+                      options={counselorOptions}
+                    />
+                    {counselorsLoading && (
+                      <div className="absolute right-3 top-8 flex items-center">
+                        <RiLoader4Line
+                          size={13}
+                          className="animate-spin text-slate-400"
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                  {/* CustomDatePicker uses useFormContext internally */}
                   <CustomDatePicker
                     name="followUp"
                     label="Follow-up Date"
@@ -349,43 +429,39 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                   label="IELTS Score (if known)"
                   placeholder="e.g. 6.5"
                   icon={
-                    <span
-                      className="text-xs font-bold text-slate-300 pr-2 mr-1"
-                      style={{ borderRight: "1px solid #f1f5f9" }}
-                    >
+                    <span className="text-xs font-bold text-slate-300 pr-2 mr-1 border-r border-slate-100">
                       Band
                     </span>
                   }
+                  control={control}
                 />
               </div>
             </div>
 
+            {/* ── FOOTER ── */}
             <div className="bg-white border-t border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold cursor-pointer hover:bg-slate-50 outline-none transition-colors"
+                disabled={isPending}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold cursor-pointer hover:bg-slate-50 outline-none transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
-                disabled={!isDirty}
-                className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-white text-xs font-bold border-none outline-none transition-all duration-150"
-                style={{
-                  background: isDirty ? "#2563eb" : "#94a3b8",
-                  cursor: isDirty ? "pointer" : "not-allowed",
-                  boxShadow: isDirty ? "0 2px 8px rgba(37,99,235,0.2)" : "none",
-                }}
-                onMouseEnter={(e) => {
-                  if (isDirty) e.currentTarget.style.background = "#1d4ed8";
-                }}
-                onMouseLeave={(e) => {
-                  if (isDirty) e.currentTarget.style.background = "#2563eb";
-                }}
+                disabled={!isDirty || isPending}
+                className={`flex items-center gap-1.5 px-6 py-2 rounded-xl text-white text-xs font-bold border-none outline-none transition-all duration-150 ${isDirty && !isPending ? "bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-md shadow-blue-600/20" : "bg-slate-400 cursor-not-allowed"}`}
               >
-                <RiCheckLine size={13} /> Save Changes
+                {isPending ? (
+                  <>
+                    <Spin size="small" /> Saving…
+                  </>
+                ) : (
+                  <>
+                    <RiCheckLine size={13} /> Save Changes
+                  </>
+                )}
               </button>
             </div>
           </form>

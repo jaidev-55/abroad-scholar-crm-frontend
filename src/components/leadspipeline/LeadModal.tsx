@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { message, Spin } from "antd";
 import { useForm, Controller } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   RiUserLine,
   RiFileTextLine,
@@ -21,13 +21,14 @@ import {
   RiDeleteBinLine,
 } from "react-icons/ri";
 import type { Dayjs } from "dayjs";
-import type { Lead } from "../../types/lead.types";
+import type { Lead } from "../../types/lead";
 import CustomInput from "../common/CustomInput";
 import CustomSelect from "../common/CustomSelect";
 import CustomDatePicker from "../common/CustomDatePicker";
 import CustomModal from "../common/CustomModal";
 import { createLead } from "../../api/leads";
 import dayjs from "dayjs";
+import { getUsers } from "../../api/auth";
 
 interface Props {
   open: boolean;
@@ -75,14 +76,6 @@ const COUNTRY_OPTIONS = [
   { value: "Singapore", label: "🇸🇬 Singapore" },
   { value: "Japan", label: "🇯🇵 Japan" },
 ];
-
-const COUNSELOR_OPTIONS = [
-  "Priya Sharma",
-  "Rahul Gupta",
-  "Anjali Mehta",
-  "Vikram Singh",
-  "Sneha Patel",
-].map((c) => ({ value: c, label: c }));
 
 const STAGES = [
   {
@@ -264,6 +257,18 @@ const LeadModal: React.FC<Props> = ({
       });
     }
   }, [open, defaultStage, reset]);
+
+  // ── Fetch real counselors from API ──────────────────
+  const { data: counselorUsers = [], isLoading: counselorsLoading } = useQuery({
+    queryKey: ["counselors"],
+    queryFn: () => getUsers("COUNSELOR"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const COUNSELOR_OPTIONS = counselorUsers.map((u) => ({
+    value: u.name,
+    label: u.name,
+  }));
 
   const watchedValues = watch();
   const stageCfg =
@@ -548,7 +553,11 @@ const LeadModal: React.FC<Props> = ({
                 <CustomSelect
                   name="counselor"
                   label="Assign Counselor"
-                  placeholder="Select counselor"
+                  placeholder={
+                    counselorsLoading
+                      ? "Loading counselors…"
+                      : "Select counselor"
+                  }
                   options={COUNSELOR_OPTIONS}
                   required
                   control={control}

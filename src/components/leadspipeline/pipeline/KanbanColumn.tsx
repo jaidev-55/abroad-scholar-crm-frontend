@@ -1,7 +1,7 @@
 import { RiAddLine } from "react-icons/ri";
 import KanbanCard from "./KanbanCard";
 import { Tooltip } from "antd";
-import type { Lead, Stage } from "../../../types/lead.types";
+import type { Lead, Stage } from "../../../types/lead";
 
 import {
   SortableContext,

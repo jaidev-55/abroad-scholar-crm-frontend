@@ -18,6 +18,7 @@ import UsersPage from "./pages/users/UsersPage";
 import PerformancePage from "./pages/performance/page";
 import ApplicationPage from "./pages/application/page";
 import VisaProcessingPage from "./pages/visaprocess/page";
+import AdIntegrationPage from "./pages/adIntegration/page";
 
 const App = () => {
   return (
@@ -39,6 +40,7 @@ const App = () => {
           <Route path="all-leads" element={<AllLeadsPage />} />
           <Route path="my-profile" element={<MyProfilePage />} />
           <Route path="enrolled" element={<EnrolledStudentsPage />} />
+          <Route path="ad-integration" element={<AdIntegrationPage />} />
           <Route path="lost-leads" element={<LostLeadsPage />} />
           <Route path="counselors" element={<CounselorsPage />} />
           <Route path="follow-ups" element={<AllFollowupsPage />} />

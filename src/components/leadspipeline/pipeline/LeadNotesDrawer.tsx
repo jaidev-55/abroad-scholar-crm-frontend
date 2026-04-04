@@ -23,7 +23,7 @@ import {
   RiAddLine,
   RiDeleteBinLine,
 } from "react-icons/ri";
-import type { Lead } from "../../../types/lead.types";
+import type { Lead } from "../../../types/lead";
 import { getLeadActivity } from "../../../api/leads";
 import { useQuery } from "@tanstack/react-query";
 

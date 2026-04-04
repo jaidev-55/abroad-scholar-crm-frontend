@@ -29,6 +29,8 @@ import {
 } from "react-icons/ai";
 import { BsBriefcase } from "react-icons/bs";
 import { FiChevronDown } from "react-icons/fi";
+import { useQuery } from "@tanstack/react-query";
+import { getCurrentUser } from "../../api/auth";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 
 const AdminLayout = () => {
@@ -40,16 +42,22 @@ const AdminLayout = () => {
   const { pathname } = useLocation();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-  const userName = "Admin";
-  const userEmail = "admin@abroadscholars.com";
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: getCurrentUser,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const userInitials = userName?.[0]?.toUpperCase() ?? "R";
+  const userName =
+    currentUser?.name || currentUser?.email?.split("@")[0] || "Admin";
+  const userEmail = currentUser?.email || "";
+  const userInitials = userName[0]?.toUpperCase() ?? "A";
   const isLoading = false;
 
   const handleSignOut = () => {
-    // TODO: Replace with your auth signOut logic
-    // Example: signOut();
-    navigate("/");
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   const menuItems = [
@@ -146,6 +154,12 @@ const AdminLayout = () => {
     },
 
     // ───── SETTINGS ─────
+    {
+      id: "ad-integration",
+      icon: RiLineChartLine,
+      label: "Ad Integration",
+      href: "/admin/ad-integration",
+    },
     {
       id: "settings",
       icon: RiSettings3Line,

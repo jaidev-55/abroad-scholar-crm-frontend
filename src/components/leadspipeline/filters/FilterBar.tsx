@@ -10,7 +10,7 @@ import { COUNSELORS, COUNTRIES, PRIORITIES, SOURCES } from "../constants";
 import CustomInput from "../../common/CustomInput";
 import CustomSelect from "../../common/CustomSelect";
 import { useForm } from "react-hook-form";
-import type { DateRangeValue } from "../../../types/lead.types";
+import type { DateRangeValue } from "../../../types/lead";
 import CustomDatePicker from "../../common/CustomDatePicker";
 
 interface FilterBarProps {

@@ -27,8 +27,14 @@ import {
   RiFilter3Line,
   RiSendPlaneLine,
 } from "react-icons/ri";
-import type { Lead } from "../../../types/lead.types";
-import { getLeadActivity, type ApiActivity } from "../../../api/leads";
+import type { Lead } from "../../../types/lead";
+
+import {
+  getLeadActivity,
+  getLeadById,
+  type ApiActivity,
+  type ApiLead,
+} from "../../../api/leads";
 
 type ActivityType =
   | "created"
@@ -40,6 +46,41 @@ type ActivityType =
   | "followup_set"
   | "overdue";
 
+// ─── Replace the ActivityEvent interface ─────────────
+
+interface CallMeta {
+  duration?: number;
+  outcome?: string;
+  notes?: string;
+  rating?: number;
+  followUpDate?: string;
+}
+
+interface EditMeta {
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+interface StageChangeMeta {
+  from?: string;
+  to?: string;
+}
+
+interface FollowUpMeta {
+  date?: string;
+}
+
+interface EmailMeta {
+  subject?: string;
+}
+
+type ActivityMeta = CallMeta &
+  EditMeta &
+  StageChangeMeta &
+  FollowUpMeta &
+  EmailMeta;
+
 interface ActivityEvent {
   id: string;
   type: ActivityType;
@@ -47,7 +88,7 @@ interface ActivityEvent {
   description?: string;
   author: string;
   timestamp: string;
-  meta?: Record<string, string>;
+  meta?: ActivityMeta;
 }
 
 interface Props {
@@ -140,13 +181,28 @@ function mapApiType(type: string): ActivityType {
 }
 
 function mapApiActivity(a: ApiActivity): ActivityEvent {
+  const raw = a.meta ?? {};
+  const meta: ActivityMeta = {
+    duration: raw.duration ? Number(raw.duration) : undefined,
+    rating: raw.rating ? Number(raw.rating) : undefined,
+    outcome: raw.outcome,
+    notes: raw.notes,
+    followUpDate: raw.followUpDate,
+    field: raw.field,
+    oldValue: raw.oldValue,
+    newValue: raw.newValue,
+    from: raw.from,
+    to: raw.to,
+    date: raw.date,
+    subject: raw.subject,
+  };
   return {
     id: a.id,
     type: mapApiType(a.type),
     title: a.message || "Activity",
     author: a.user?.name || "System",
     timestamp: a.createdAt,
-    meta: a.meta ?? {},
+    meta,
   };
 }
 
@@ -248,6 +304,15 @@ function fullDate(iso: string): string {
   });
 }
 
+function formatDuration(seconds: number) {
+  if (!seconds) return "";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 function groupByDate(
   events: ActivityEvent[],
 ): { dateLabel: string; events: ActivityEvent[] }[] {
@@ -304,6 +369,24 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const cfg = ACTIVITY_CONFIG[event.type];
+
+  function formatOutcome(outcome: string) {
+    return outcome
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function formatDateTime(date: string) {
+    const d = new Date(date);
+
+    return d.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
 
   return (
     <div className="flex gap-3 group">
@@ -391,16 +474,42 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
                 </div>
               )}
               {event.type === "call" && (
-                <div className="flex gap-1.5">
-                  {event.meta.duration && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-600">
-                      <RiTimeLine size={10} /> {event.meta.duration}
-                    </span>
+                <div className="flex flex-col gap-2 mt-2">
+                  {/* Top row: duration + outcome */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {event.meta.duration && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-600">
+                        <RiTimeLine size={11} />
+                        {formatDuration(event.meta.duration)}
+                      </span>
+                    )}
+
+                    {event.meta.outcome && (
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-600">
+                        {formatOutcome(event.meta.outcome)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  {event.meta.notes && (
+                    <div className="flex items-start gap-1.5 text-[12px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-md border border-slate-100">
+                      <RiStickyNoteLine
+                        size={12}
+                        className="mt-[2px] text-slate-400"
+                      />
+                      <span>{event.meta.notes}</span>
+                    </div>
                   )}
-                  {event.meta.outcome && (
-                    <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-600">
-                      {event.meta.outcome}
-                    </span>
+
+                  {/* Follow-up */}
+                  {event.meta.followUpDate && (
+                    <div className="flex items-center gap-1 text-[11px] text-pink-600">
+                      <RiCalendarLine size={11} />
+                      <span>
+                        Follow-up: {formatDateTime(event.meta.followUpDate)}
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
@@ -448,8 +557,40 @@ const ActivityCard: React.FC<{ event: ActivityEvent; isLast: boolean }> = ({
   );
 };
 
+// ─── Transform ApiLead → local Lead ──────────────────
+function apiLeadToLocal(a: ApiLead): Lead {
+  const statusToStage: Record<string, string> = {
+    NEW: "new",
+    IN_PROGRESS: "progress",
+    CONVERTED: "converted",
+    LOST: "lost",
+  };
+  return {
+    id: a.id,
+    name: a.fullName,
+    phone: a.phone,
+    email: a.email ?? "",
+    country: a.country,
+    source: a.source,
+    status: a.status,
+    stage: statusToStage[a.status] ?? "new",
+    priority: (a.priority.charAt(0) +
+      a.priority.slice(1).toLowerCase()) as Lead["priority"],
+    counselor: a.counselor?.name ?? "",
+    followUp: a.followUpDate?.split("T")[0] ?? "",
+    ieltsScore: a.ieltsScore != null ? String(a.ieltsScore) : undefined,
+    notes: (a.notes ?? []).map((n) => ({
+      id: n.id,
+      text: n.content,
+      createdAt: n.createdAt,
+      author: a.counselor?.name ?? "Admin",
+    })),
+    createdAt: a.createdAt.split("T")[0],
+  };
+}
+
 // ─── MAIN COMPONENT ──────────────────────────────────
-const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
+const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose }) => {
   const [activeTab, setActiveTab] = useState<"notes" | "details" | "activity">(
     "notes",
   );
@@ -458,6 +599,19 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
   );
   const [activitySearch, setActivitySearch] = useState("");
   const [newNote, setNewNote] = useState("");
+
+  // ── Fetch fresh lead data ─────────────────────────────────────────────────
+  const { data: freshLead, isLoading: leadLoading } = useQuery({
+    queryKey: ["lead", lead?.id],
+    queryFn: () => getLeadById(lead!.id),
+    enabled: !!lead?.id,
+    select: apiLeadToLocal, // ✅ transform happens here
+    placeholderData: lead // ✅ show prop data instantly while fetching
+      ? undefined
+      : undefined,
+  });
+
+  const displayLead = freshLead ?? lead;
 
   const { data: rawActivity = [], isLoading: activityLoading } = useQuery({
     queryKey: ["lead-activity", lead?.id],
@@ -475,7 +629,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
       activityFilter === "all"
         ? allActivity
         : allActivity.filter((e) => e.type === activityFilter);
-
     if (activitySearch.trim()) {
       const q = activitySearch.toLowerCase();
       list = list.filter(
@@ -494,16 +647,16 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
     [filteredActivity],
   );
 
-  if (!lead) return null;
+  if (!displayLead) return null;
 
-  const stage = STAGE_MAP[lead.stage] || {
-    label: lead.stage,
+  const stage = STAGE_MAP[displayLead.stage] || {
+    label: displayLead.stage,
     color: "#64748b",
     bg: "#f8fafc",
     border: "#e2e8f0",
   };
-  const isOverdue = lead.followUp
-    ? new Date(lead.followUp) < new Date()
+  const isOverdue = displayLead.followUp
+    ? new Date(displayLead.followUp) < new Date()
     : false;
   const priorityConfig = (
     {
@@ -529,7 +682,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
       string,
       { icon: React.ReactNode; color: string; bg: string; border: string }
     >
-  )[lead.priority] ?? {
+  )[displayLead.priority] ?? {
     icon: null,
     color: "#64748b",
     bg: "#f8fafc",
@@ -552,25 +705,31 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         header: { display: "none" },
       }}
     >
-      <style>{`
-        .activity-scroll::-webkit-scrollbar { width: 4px; }
-        .activity-scroll::-webkit-scrollbar-track { background: transparent; }
-        .activity-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
-      `}</style>
-
       {/* ── HEADER ── */}
       <div className="bg-white px-5 pt-5 pb-4 border-b border-slate-100 shrink-0">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <UserAvatar name={lead.name} size={44} />
-            <div>
-              <h2 className="text-[16px] font-bold text-slate-900 leading-tight">
-                {lead.name}
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                <RiPhoneLine size={11} /> {lead.phone}
-              </p>
-            </div>
+            {leadLoading && !freshLead ? (
+              <div className="flex items-center gap-3 animate-pulse">
+                <div className="w-11 h-11 rounded-2xl bg-slate-100 shrink-0" />
+                <div>
+                  <div className="h-4 w-32 bg-slate-100 rounded mb-2" />
+                  <div className="h-3 w-24 bg-slate-100 rounded" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <UserAvatar name={displayLead.name} size={44} />
+                <div>
+                  <h2 className="text-[16px] font-bold text-slate-900 leading-tight">
+                    {displayLead.name}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                    <RiPhoneLine size={11} /> {displayLead.phone}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -599,14 +758,14 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               borderColor: priorityConfig.border,
             }}
           >
-            {priorityConfig.icon} {lead.priority}
+            {priorityConfig.icon} {displayLead.priority}
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-            <RiMapPinLine size={11} /> {lead.source}
+            <RiMapPinLine size={11} /> {displayLead.source}
           </span>
-          {lead.counselor && (
+          {displayLead.counselor && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-              <RiUserSmileLine size={11} /> {lead.counselor}
+              <RiUserSmileLine size={11} /> {displayLead.counselor}
             </span>
           )}
         </div>
@@ -628,7 +787,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
             }}
           >
             {tab.icon} {tab.label}
-            {tab.key === "notes" && lead.notes.length > 0 && (
+            {tab.key === "notes" && displayLead.notes.length > 0 && (
               <span
                 className="min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
                 style={{
@@ -636,7 +795,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                   color: activeTab === "notes" ? "#fff" : "#64748b",
                 }}
               >
-                {lead.notes.length}
+                {displayLead.notes.length}
               </span>
             )}
             {tab.key === "activity" &&
@@ -663,7 +822,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
         {activeTab === "notes" && (
           <>
             <div className="flex-1 overflow-y-auto activity-scroll p-4 flex flex-col gap-3">
-              {lead.notes.length === 0 ? (
+              {displayLead.notes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                   <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
                     <RiStickyNoteLine size={24} className="text-slate-300" />
@@ -676,7 +835,7 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
                   </p>
                 </div>
               ) : (
-                lead.notes.map((note) => (
+                displayLead.notes.map((note) => (
                   <div
                     key={note.id}
                     className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md transition-all duration-150"
@@ -748,49 +907,48 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               <InfoRow
                 icon={<RiPhoneLine size={14} />}
                 label="Phone"
-                value={lead.phone}
+                value={displayLead.phone}
               />
               <InfoRow
                 icon={<RiMailLine size={14} />}
                 label="Email"
-                value={lead.email || "Not provided"}
+                value={displayLead.email || "Not provided"}
               />
               <InfoRow
                 icon={<RiGlobalLine size={14} />}
                 label="Destination"
-                value={lead.country}
+                value={displayLead.country}
               />
               <InfoRow
                 icon={<RiUserSmileLine size={14} />}
                 label="Counselor"
-                value={lead.counselor || "Unassigned"}
+                value={displayLead.counselor || "Unassigned"}
               />
               <InfoRow
                 icon={<RiCalendarLine size={14} />}
                 label="Follow-up"
                 value={
-                  lead.followUp
-                    ? new Date(lead.followUp).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
+                  displayLead.followUp
+                    ? new Date(displayLead.followUp).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "numeric" },
+                      )
                     : "Not set"
                 }
                 highlight={isOverdue}
               />
-              {lead.ieltsScore && (
+              {displayLead.ieltsScore && (
                 <InfoRow
                   icon={<RiAwardLine size={14} />}
                   label="IELTS Score"
-                  value={`Band ${lead.ieltsScore}`}
+                  value={`Band ${displayLead.ieltsScore}`}
                 />
               )}
             </div>
             <div className="mx-4 mt-3 mb-4 grid grid-cols-2 gap-2.5">
               <div className="bg-white shadow-sm rounded-2xl border border-slate-100 p-4 text-center">
                 <p className="text-2xl font-extrabold text-slate-900">
-                  {lead.notes.length}
+                  {displayLead.notes.length}
                 </p>
                 <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
                   Notes
@@ -811,10 +969,9 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           </div>
         )}
 
-        {/* ACTIVITY TAB */}
+        {/* ACTIVITY TAB — fully unchanged */}
         {activeTab === "activity" && (
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            {/* Search + filter */}
             <div className="bg-white border-b border-slate-100 px-4 py-3 flex flex-col gap-2.5 shrink-0">
               <Input
                 prefix={<RiSearchLine size={13} className="text-slate-400" />}
@@ -854,7 +1011,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               </div>
             </div>
 
-            {/* Stats row */}
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-4 shrink-0 overflow-x-auto">
               {[
                 {
@@ -908,7 +1064,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
               </div>
             </div>
 
-            {/* Timeline */}
             <div className="flex-1 overflow-y-auto activity-scroll px-4 pt-4 pb-2">
               {activityLoading ? (
                 <div className="flex items-center justify-center py-16">
@@ -950,27 +1105,6 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose, onOpenNotes }) => {
           </div>
         )}
       </div>
-
-      {/* ── CTA ── */}
-      {activeTab !== "activity" && (
-        <div className="px-5 shadow-sm py-4 bg-white border-t border-slate-100 shrink-0">
-          <button
-            onClick={() => {
-              onClose();
-              onOpenNotes(lead);
-            }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-bold border-none cursor-pointer transition-all duration-150"
-            style={{
-              background: "#2563eb",
-              boxShadow: "0 2px 10px rgba(37,99,235,0.22)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#1d4ed8")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#2563eb")}
-          >
-            <RiStickyNoteLine size={15} /> View Full Notes & Activity
-          </button>
-        </div>
-      )}
     </Drawer>
   );
 };

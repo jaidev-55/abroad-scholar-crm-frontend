@@ -1,33 +1,27 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Table,
   Input,
   Select,
   DatePicker,
-  Dropdown,
   Tooltip,
   Modal,
   ConfigProvider,
-  Popconfirm,
   message,
-  Drawer,
+  Spin,
 } from "antd";
 import type { TableColumnsType } from "antd";
 import type { Dayjs } from "dayjs";
-import type { MenuProps } from "antd";
+
+import { useQuery } from "@tanstack/react-query";
 import {
   RiSearchLine,
-  RiAddLine,
   RiDownloadLine,
   RiUserLine,
   RiFireLine,
   RiTimeLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
-  RiMoreLine,
-  RiEyeLine,
-  RiPencilLine,
-  RiDeleteBinLine,
   RiPhoneLine,
   RiMailLine,
   RiArrowDownSLine,
@@ -38,371 +32,176 @@ import {
   RiSnowflakeLine,
   RiStickyNoteLine,
   RiTeamLine,
-  RiArrowRightLine,
   RiCheckLine,
   RiRefreshLine,
   RiArrowUpLine,
   RiArrowDownLine,
   RiFilterOffLine,
+  RiLoader4Line,
+  RiGlobalLine,
 } from "react-icons/ri";
+import {
+  getLeads,
+  type ApiLead,
+  type LeadStatus as ApiLeadStatus,
+  type LeadPriority,
+} from "../../api/leads";
+import { getUsers } from "../../api/auth";
 
 const { RangePicker } = DatePicker;
 
-// ─────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────
 type Priority = "Hot" | "Warm" | "Cold";
-type LeadStatus = "Active" | "Lost";
-type StageId =
-  | "new"
-  | "contacted"
-  | "ielts"
-  | "applied"
-  | "offer"
-  | "visa"
-  | "enrolled";
+type DateRangeValue = [Dayjs, Dayjs] | null;
+type BulkModalType = "assign" | null;
 
-interface Stage {
-  id: StageId;
-  label: string;
-  color: string;
-  bg: string;
-  twText: string;
-  twBg: string;
-  twBorder: string;
-  icon: string;
-}
+// ─── Map API → local ──────────────────────────────────
+const STATUS_LABEL: Record<ApiLeadStatus, string> = {
+  NEW: "New",
+  IN_PROGRESS: "In Progress",
+  CONVERTED: "Converted",
+  LOST: "Lost",
+};
 
-interface Lead {
-  key: string;
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  stage: StageId;
-  source: string;
-  counselor: string;
-  followUp: string;
-  country: string;
-  priority: Priority;
-  status: LeadStatus;
-  lostReason: string | null;
-  createdAt: string;
-  notesCount: number;
-  ieltsScore: string | null;
-}
+const STATUS_CLS: Record<ApiLeadStatus, string> = {
+  NEW: "bg-blue-50 text-blue-600 border-blue-200",
+  IN_PROGRESS: "bg-violet-50 text-violet-600 border-violet-200",
+  CONVERTED: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  LOST: "bg-red-50 text-red-500 border-red-200",
+};
 
-interface StatCardProps {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ size?: number }>;
-  colorCls: string;
-  barCls: string;
-  delta?: number;
-}
+const STATUS_DOT_CLS: Record<ApiLeadStatus, string> = {
+  NEW: "bg-blue-400",
+  IN_PROGRESS: "bg-violet-400",
+  CONVERTED: "bg-emerald-400",
+  LOST: "bg-red-400",
+};
 
+const PRIORITY_MAP: Record<
+  LeadPriority,
+  { label: Priority; cls: string; icon: React.ReactNode }
+> = {
+  HOT: {
+    label: "Hot",
+    cls: "text-red-600 bg-red-50 border-red-200",
+    icon: <RiFireLine size={10} />,
+  },
+  WARM: {
+    label: "Warm",
+    cls: "text-amber-600 bg-amber-50 border-amber-200",
+    icon: <RiFlashlightLine size={10} />,
+  },
+  COLD: {
+    label: "Cold",
+    cls: "text-blue-600 bg-blue-50 border-blue-200",
+    icon: <RiSnowflakeLine size={10} />,
+  },
+};
+
+const PRIORITY_ORDER: Record<LeadPriority, number> = {
+  HOT: 0,
+  WARM: 1,
+  COLD: 2,
+};
+
+// ─── Source style map ─────────────────────────────────
+const SOURCE_STYLE_MAP: Record<string, string> = {
+  INSTAGRAM: "bg-pink-50 text-pink-700 border-pink-200",
+  WEBSITE: "bg-blue-50 text-blue-700 border-blue-200",
+  WALK_IN: "bg-amber-50 text-amber-700 border-amber-200",
+  GOOGLE_ADS: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  META_ADS: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  REFERRAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  FACEBOOK: "bg-blue-50 text-blue-700 border-blue-200",
+  EDUCATION_FAIR: "bg-violet-50 text-violet-700 border-violet-200",
+};
+
+const DEFAULT_SOURCE_STYLE = "bg-slate-50 text-slate-600 border-slate-200";
+
+// ─── Helpers ──────────────────────────────────────────
+const formatSourceLabel = (src: string): string =>
+  src.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const getInitials = (name: string): string =>
+  (name || "?")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const getHue = (name: string): number =>
+  name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+
+// ─── Components ───────────────────────────────────────
 interface AvatarProps {
   name: string;
   size?: number;
 }
 
-interface PriBadgeProps {
-  p: Priority;
-}
-
-interface StagePillProps {
-  sid: StageId;
-}
-
-interface SrcBadgeProps {
-  src: string;
-}
-
-interface BulkBarProps {
-  selected: string[];
-  total: number;
-  onClear: () => void;
-  onAssign: () => void;
-  onStage: () => void;
-  onLost: () => void;
-  onDelete: () => void;
-  onExport: () => void;
-}
-
-type BulkModalType = "assign" | "stage" | null;
-type DateRangeValue = [Dayjs, Dayjs] | null;
-
-// ─────────────────────────────────────────────
-// DATA
-// ─────────────────────────────────────────────
-const STAGES: Stage[] = [
-  {
-    id: "new",
-    label: "New Lead",
-    color: "#3B82F6",
-    bg: "#EFF6FF",
-    twText: "text-blue-600",
-    twBg: "bg-blue-50",
-    twBorder: "border-blue-200",
-    icon: "⚡",
-  },
-  {
-    id: "contacted",
-    label: "Contacted",
-    color: "#0EA5E9",
-    bg: "#F0F9FF",
-    twText: "text-sky-600",
-    twBg: "bg-sky-50",
-    twBorder: "border-sky-200",
-    icon: "📞",
-  },
-  {
-    id: "ielts",
-    label: "IELTS Planning",
-    color: "#8B5CF6",
-    bg: "#F5F3FF",
-    twText: "text-violet-600",
-    twBg: "bg-violet-50",
-    twBorder: "border-violet-200",
-    icon: "📝",
-  },
-  {
-    id: "applied",
-    label: "Applied",
-    color: "#F59E0B",
-    bg: "#FFFBEB",
-    twText: "text-amber-600",
-    twBg: "bg-amber-50",
-    twBorder: "border-amber-200",
-    icon: "📄",
-  },
-  {
-    id: "offer",
-    label: "Offer Received",
-    color: "#10B981",
-    bg: "#ECFDF5",
-    twText: "text-emerald-600",
-    twBg: "bg-emerald-50",
-    twBorder: "border-emerald-200",
-    icon: "🎉",
-  },
-  {
-    id: "visa",
-    label: "Visa Filed",
-    color: "#06B6D4",
-    bg: "#ECFEFF",
-    twText: "text-cyan-600",
-    twBg: "bg-cyan-50",
-    twBorder: "border-cyan-200",
-    icon: "✈️",
-  },
-  {
-    id: "enrolled",
-    label: "Enrolled",
-    color: "#22C55E",
-    bg: "#F0FDF4",
-    twText: "text-green-600",
-    twBg: "bg-green-50",
-    twBorder: "border-green-200",
-    icon: "🎓",
-  },
-];
-
-const SOURCES: string[] = [
-  "Website",
-  "Referral",
-  "Facebook",
-  "Instagram",
-  "Walk-in",
-  "Google Ads",
-  "Education Fair",
-];
-const COUNSELORS: string[] = [
-  "Priya Sharma",
-  "Arjun Patel",
-  "Sarah Khan",
-  "Rohan Mehta",
-  "Anita Desai",
-];
-const COUNTRIES: string[] = [
-  "🇬🇧 UK",
-  "🇨🇦 Canada",
-  "🇺🇸 USA",
-  "🇦🇺 Australia",
-  "🇩🇪 Germany",
-  "🇮🇪 Ireland",
-  "🇳🇿 New Zealand",
-];
-const PRIORITIES: Priority[] = ["Hot", "Warm", "Cold"];
-const LOST_REASONS: string[] = [
-  "Budget constraints",
-  "Chose another agency",
-  "Decided not to study abroad",
-  "Visa rejected",
-  "Unresponsive",
-  "Poor IELTS score",
-  "Family issues",
-  "Other",
-];
-const STATUSES: LeadStatus[] = ["Active", "Lost"];
-
-const genLeads = (): Lead[] => {
-  const names = [
-    "Aarav Mehta",
-    "Sneha Reddy",
-    "Kunal Joshi",
-    "Ishita Gupta",
-    "Rahul Nair",
-    "Meera Iyer",
-    "Vikram Singh",
-    "Pooja Bhat",
-    "Aryan Kapoor",
-    "Diya Sharma",
-    "Karthik Rajan",
-    "Nisha Patel",
-    "Aditya Rao",
-    "Simran Kaur",
-    "Varun Das",
-    "Priya Nambiar",
-    "Rohan Khanna",
-    "Ananya Srinivasan",
-    "Dev Malhotra",
-    "Lakshmi Menon",
-    "Siddharth Agarwal",
-    "Kavya Nair",
-    "Nikhil Choudhary",
-    "Ritu Banerjee",
-    "Amrit Singh",
-    "Tanya Jain",
-    "Harsh Vardhan",
-    "Neha Kulkarni",
-    "Pranav Desai",
-    "Swati Mishra",
-    "Akash Pandey",
-    "Divya Krishnan",
-    "Manish Tiwari",
-    "Shruti Hegde",
-    "Rajat Saxena",
-  ];
-  return names.map((name, i): Lead => {
-    const stage = STAGES[i % STAGES.length].id;
-    const daysOff = Math.floor(Math.random() * 14) - 7;
-    const fu = new Date();
-    fu.setDate(fu.getDate() + daysOff);
-    return {
-      key: `lead-${i + 1}`,
-      id: `lead-${i + 1}`,
-      name,
-      phone: `+91 ${9000000000 + Math.floor(Math.random() * 999999999)}`,
-      email: `${name.toLowerCase().replace(" ", ".")}@email.com`,
-      stage: stage as StageId,
-      source: SOURCES[i % SOURCES.length],
-      counselor: COUNSELORS[i % COUNSELORS.length],
-      followUp: fu.toISOString().split("T")[0],
-      country: COUNTRIES[i % COUNTRIES.length],
-      priority: PRIORITIES[i % PRIORITIES.length],
-      status: i % 8 === 0 ? "Lost" : "Active",
-      lostReason: i % 8 === 0 ? LOST_REASONS[i % LOST_REASONS.length] : null,
-      createdAt: new Date(Date.now() - Math.random() * 30 * 86400000)
-        .toISOString()
-        .split("T")[0],
-      notesCount: Math.floor(Math.random() * 4),
-      ieltsScore:
-        stage === "ielts" || stage === "applied"
-          ? `${(5.5 + Math.random() * 2.5).toFixed(1)}`
-          : null,
-    };
-  });
-};
-
-const INIT_DATA = genLeads();
-
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
 const Avatar: React.FC<AvatarProps> = ({ name, size = 32 }) => {
-  const ini = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
-  const hue = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  const ini = getInitials(name);
+  const hue = getHue(name);
   return (
     <div
       style={{
         width: size,
         height: size,
         borderRadius: size * 0.3,
-        background: `hsl(${hue},55%,90%)`,
-        color: `hsl(${hue},45%,32%)`,
+        background: `hsl(${hue}, 55%, 90%)`,
+        color: `hsl(${hue}, 45%, 32%)`,
         fontSize: size * 0.36,
         fontWeight: 700,
       }}
-      className="flex items-center justify-center shrink-0 select-none font-mono"
+      className="flex items-center justify-center shrink-0 select-none"
     >
       {ini}
     </div>
   );
 };
 
-const PriBadge: React.FC<PriBadgeProps> = ({ p }) => {
-  const cfg: Record<Priority, { cls: string; icon: React.ReactNode }> = {
-    Hot: {
-      cls: "text-red-600 bg-red-50 border-red-200",
-      icon: <RiFireLine size={10} />,
-    },
-    Warm: {
-      cls: "text-amber-600 bg-amber-50 border-amber-200",
-      icon: <RiFlashlightLine size={10} />,
-    },
-    Cold: {
-      cls: "text-blue-600 bg-blue-50 border-blue-200",
-      icon: <RiSnowflakeLine size={10} />,
-    },
-  };
-  const { cls, icon } = cfg[p];
+const PriBadge: React.FC<{ p: LeadPriority }> = ({ p }) => {
+  const { cls, icon, label } = PRIORITY_MAP[p];
   return (
     <span
       className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${cls}`}
     >
       {icon}
-      {p}
+      {label}
     </span>
   );
 };
 
-const StagePill: React.FC<StagePillProps> = ({ sid }) => {
-  const s = STAGES.find((x) => x.id === sid);
-  if (!s) return null;
+const StatusBadge: React.FC<{ s: ApiLeadStatus }> = ({ s }) => (
+  <span
+    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_CLS[s]}`}
+  >
+    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_CLS[s]}`} />
+    {STATUS_LABEL[s]}
+  </span>
+);
+
+const SrcBadge: React.FC<{ src: string }> = ({ src }) => {
+  if (!src) return <span className="text-[11px] text-slate-300">—</span>;
+  const style = SOURCE_STYLE_MAP[src] ?? DEFAULT_SOURCE_STYLE;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${s.twBg} ${s.twText} ${s.twBorder}`}
+      className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${style}`}
     >
-      <span className="text-[10px]">{s.icon}</span>
-      {s.label}
+      {formatSourceLabel(src)}
     </span>
   );
 };
 
-const SrcBadge: React.FC<SrcBadgeProps> = ({ src }) => {
-  const map: Record<string, string> = {
-    Website: "bg-blue-50 text-blue-700 border-blue-200",
-    Referral: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Facebook: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    Instagram: "bg-pink-50 text-pink-700 border-pink-200",
-    "Walk-in": "bg-amber-50 text-amber-700 border-amber-200",
-    "Google Ads": "bg-yellow-50 text-yellow-700 border-yellow-200",
-    "Education Fair": "bg-violet-50 text-violet-700 border-violet-200",
-  };
-  return (
-    <span
-      className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${map[src] || "bg-gray-50 text-gray-600 border-gray-200"}`}
-    >
-      {src}
-    </span>
-  );
-};
+interface StatCardProps {
+  label: string;
+  value: number | string;
+  icon: React.ComponentType<{ size?: number }>;
+  colorCls: string;
+  barCls: string;
+  delta?: number;
+  loading?: boolean;
+}
 
 const StatCard: React.FC<StatCardProps> = ({
   label,
@@ -411,24 +210,31 @@ const StatCard: React.FC<StatCardProps> = ({
   colorCls,
   barCls,
   delta,
+  loading,
 }) => (
-  <div className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 relative overflow-hidden hover:shadow-md hover:shadow-slate-100 transition-all duration-200 cursor-default">
+  <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3 relative overflow-hidden hover:shadow-md hover:shadow-slate-100 transition-all duration-200 cursor-default">
     <div
-      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colorCls}`}
+      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${colorCls}`}
     >
-      <Icon size={18} />
+      <Icon size={20} />
     </div>
-    <div className="min-w-0">
-      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+    <div className="min-w-0 flex-1">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
         {label}
       </p>
-      <div className="flex items-baseline gap-1.5">
-        <p className="text-2xl font-black text-slate-900 leading-none">
-          {value}
-        </p>
-        {delta !== undefined && (
+      <div className="flex items-baseline gap-1.5 mt-0.5">
+        {loading ? (
+          <div className="h-7 w-10 bg-slate-100 animate-pulse rounded-lg" />
+        ) : (
+          <p className="text-2xl font-black text-slate-900 leading-none">
+            {value}
+          </p>
+        )}
+        {delta !== undefined && !loading && (
           <span
-            className={`text-[10px] font-bold flex items-center gap-0.5 ${delta >= 0 ? "text-emerald-600" : "text-red-500"}`}
+            className={`text-[10px] font-bold flex items-center gap-0.5 ${
+              delta >= 0 ? "text-emerald-600" : "text-red-500"
+            }`}
           >
             {delta >= 0 ? (
               <RiArrowUpLine size={10} />
@@ -440,242 +246,395 @@ const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
     </div>
-    <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${barCls}`} />
+    <div className={`absolute bottom-0 left-0 right-0 h-[3px] ${barCls}`} />
   </div>
 );
 
-// ─────────────────────────────────────────────
-// BULK ACTION BAR
-// ─────────────────────────────────────────────
-const BulkBar: React.FC<BulkBarProps> = ({
-  selected,
-  onClear,
-  onAssign,
-  onStage,
-  onLost,
-  onDelete,
-  onExport,
+// ─── Detail Drawer ────────────────────────────────────
+interface DetailDrawerProps {
+  lead: ApiLead;
+  today: string;
+  onClose: () => void;
+}
+
+const DetailDrawer: React.FC<DetailDrawerProps> = ({
+  lead,
+  today,
+  onClose,
 }) => {
-  if (!selected.length) return null;
+  const fu = lead.followUpDate?.split("T")[0] ?? null;
+  const isOverdue = fu ? fu < today : false;
+  const noteCount = lead.notes?.length ?? 0;
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/40 border border-slate-700">
-        <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
-          <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
-            <RiCheckLine size={12} />
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+
+      {/* Drawer panel */}
+      <div className="relative w-[460px] h-full bg-slate-50 flex flex-col shadow-2xl">
+        {/* Hero header */}
+        <div className="px-6 pt-6 pb-5 relative overflow-hidden bg-gradient-to-br from-blue-700 to-blue-500 shrink-0">
+          <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/[0.07]" />
+          <div className="absolute -bottom-6 left-20 w-24 h-24 rounded-full bg-white/[0.05]" />
+
+          <div className="flex items-start justify-between relative z-10">
+            <div className="flex items-center gap-3">
+              <Avatar name={lead.fullName} size={50} />
+              <div>
+                <h2 className="text-lg font-black text-white leading-tight">
+                  {lead.fullName}
+                </h2>
+                <p className="text-xs text-white/60 mt-0.5">
+                  {lead.country ?? ""}
+                  {lead.source ? ` · ${formatSourceLabel(lead.source)}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
+              aria-label="Close drawer"
+            >
+              ✕
+            </button>
           </div>
-          <span className="text-sm font-bold">{selected.length} selected</span>
-          <button
-            onClick={onClear}
-            className="text-slate-400 hover:text-white text-xs bg-transparent border-none cursor-pointer ml-1 underline"
-          >
-            clear
-          </button>
+
+          <div className="flex gap-2 mt-4 flex-wrap relative z-10">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/20 text-white border border-white/25">
+              {STATUS_LABEL[lead.status]}
+            </span>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/20 text-white border border-white/25">
+              {PRIORITY_MAP[lead.priority].label} Priority
+            </span>
+            {lead.counselor?.name && (
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/20 text-white border border-white/25">
+                {lead.counselor.name}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={onAssign}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold border-none cursor-pointer transition-colors"
-        >
-          <RiUserSmileLine size={13} /> Assign
-        </button>
-        <button
-          onClick={onStage}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold border-none cursor-pointer transition-colors"
-        >
-          <RiArrowRightLine size={13} /> Change Stage
-        </button>
-        <button
-          onClick={onLost}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-red-200 text-xs font-semibold border-none cursor-pointer transition-colors"
-        >
-          <RiCloseCircleLine size={13} /> Mark Lost
-        </button>
-        <button
-          onClick={onExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold border-none cursor-pointer transition-colors"
-        >
-          <RiDownloadLine size={13} /> Export
-        </button>
-        <Popconfirm
-          title={`Delete ${selected.length} leads?`}
-          onConfirm={onDelete}
-          okText="Delete"
-          okButtonProps={{ danger: true }}
-        >
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-red-200 text-xs font-semibold border-none cursor-pointer transition-colors">
-            <RiDeleteBinLine size={13} /> Delete
-          </button>
-        </Popconfirm>
+
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
+          {/* Contact Info */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+              Contact Info
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <a
+                href={`tel:${lead.phone}`}
+                className="flex items-center gap-2.5 text-[13px] text-slate-700 hover:text-blue-600 no-underline transition-colors"
+              >
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <RiPhoneLine size={14} className="text-blue-500" />
+                </div>
+                {lead.phone}
+              </a>
+              {lead.email && (
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="flex items-center gap-2.5 text-[13px] text-slate-700 hover:text-blue-600 no-underline transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <RiMailLine size={14} className="text-blue-500" />
+                  </div>
+                  <span className="truncate">{lead.email}</span>
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Details grid */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+              Lead Details
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  { label: "Country", value: lead.country ?? "—" },
+                  {
+                    label: "Source",
+                    value: lead.source ? formatSourceLabel(lead.source) : "—",
+                  },
+                  {
+                    label: "Counselor",
+                    value: lead.counselor?.name ?? "Unassigned",
+                  },
+                  {
+                    label: "IELTS Score",
+                    value:
+                      lead.ieltsScore != null ? `Band ${lead.ieltsScore}` : "—",
+                  },
+                  {
+                    label: "Notes",
+                    value: `${noteCount} note${noteCount !== 1 ? "s" : ""}`,
+                  },
+                  {
+                    label: "Created",
+                    value: lead.createdAt
+                      ? new Date(lead.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "—",
+                  },
+                ] as const
+              ).map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+                    {label}
+                  </p>
+                  <p className="text-[13px] font-semibold text-slate-700">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Follow-up */}
+          {fu && (
+            <div
+              className={`rounded-2xl border p-4 shadow-sm ${
+                isOverdue
+                  ? "bg-red-50 border-red-200"
+                  : "bg-white border-slate-100"
+              }`}
+            >
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                Follow-up Date
+              </p>
+              <div
+                className={`flex items-center gap-2 text-sm font-bold ${
+                  isOverdue ? "text-red-600" : "text-slate-800"
+                }`}
+              >
+                <RiCalendarLine size={16} />
+                {new Date(fu).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "long",
+                  day: "numeric",
+                })}
+                {isOverdue && (
+                  <span className="text-[11px] font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 ml-1">
+                    Overdue
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Lost reason */}
+          {lead.lostReason && (
+            <div className="bg-red-50 rounded-2xl border border-red-200 p-4 shadow-sm">
+              <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">
+                Lost Reason
+              </p>
+              <p className="text-[13px] font-semibold text-red-700">
+                {formatSourceLabel(lead.lostReason)}
+              </p>
+            </div>
+          )}
+
+          {/* Notes — scrollable */}
+          {noteCount > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 shrink-0">
+                Notes ({noteCount})
+              </p>
+              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+                {lead.notes!.map((note) => (
+                  <div
+                    key={note.id}
+                    className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-100"
+                  >
+                    <RiStickyNoteLine
+                      size={13}
+                      className="text-blue-400 mt-0.5 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        {note.content}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {new Date(note.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-// ─────────────────────────────────────────────
-// MAIN PAGE
-// ─────────────────────────────────────────────
+// ─── MAIN PAGE ────────────────────────────────────────
 const AllLeadsPage: React.FC = () => {
-  const [data, setData] = useState<Lead[]>(INIT_DATA);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [search, setSearch] = useState<string>("");
-  const [stageF, setStageF] = useState<StageId | null>(null);
+  const [search, setSearch] = useState("");
   const [sourceF, setSourceF] = useState<string | null>(null);
   const [counselorF, setCounselorF] = useState<string | null>(null);
   const [countryF, setCountryF] = useState<string | null>(null);
-  const [priorityF, setPriorityF] = useState<Priority | null>(null);
-  const [statusF, setStatusF] = useState<LeadStatus | null>(null);
-  const [lostReasonF, setLostReasonF] = useState<string | null>(null);
+  const [priorityF, setPriorityF] = useState<LeadPriority | null>(null);
+  const [statusF, setStatusF] = useState<ApiLeadStatus | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
-  const [showFilters, setShowFilters] = useState<boolean>(true);
-  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [showFilters, setShowFilters] = useState(true);
+  const [selected, setSelected] = useState<string[]>([]);
   const [bulkModal, setBulkModal] = useState<BulkModalType>(null);
   const [bulkValue, setBulkValue] = useState<string | null>(null);
+  const [detailLead, setDetailLead] = useState<ApiLead | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
-  const filtered = useMemo<Lead[]>(
-    () =>
-      data.filter((r) => {
-        if (search) {
-          const q = search.toLowerCase();
-          if (
-            !r.name.toLowerCase().includes(q) &&
-            !r.phone.includes(q) &&
-            !r.email.toLowerCase().includes(q)
-          )
-            return false;
-        }
-        if (stageF && r.stage !== stageF) return false;
-        if (sourceF && r.source !== sourceF) return false;
-        if (counselorF && r.counselor !== counselorF) return false;
-        if (countryF && r.country !== countryF) return false;
-        if (priorityF && r.priority !== priorityF) return false;
-        if (statusF && r.status !== statusF) return false;
-        if (lostReasonF && r.lostReason !== lostReasonF) return false;
-        if (dateRange?.[0] && r.followUp < dateRange[0].format("YYYY-MM-DD"))
-          return false;
-        if (dateRange?.[1] && r.followUp > dateRange[1].format("YYYY-MM-DD"))
-          return false;
-        return true;
-      }),
-    [
-      data,
-      search,
-      stageF,
+  // ── Fetch leads ───────────────────────────────────
+  const {
+    data: rawLeads = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "leads",
       sourceF,
       counselorF,
       countryF,
       priorityF,
       statusF,
-      lostReasonF,
-      dateRange,
+      dateRange?.[0]?.format("YYYY-MM-DD"),
+      dateRange?.[1]?.format("YYYY-MM-DD"),
     ],
+    queryFn: () =>
+      getLeads({
+        source: sourceF ?? undefined,
+        country: countryF ?? undefined,
+        priority: priorityF ?? undefined,
+        status: statusF ?? undefined,
+        startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
+        endDate: dateRange?.[1]?.format("YYYY-MM-DD"),
+      }),
+    placeholderData: (prev) => prev,
+  });
+
+  // ── Fetch counselors for filter ───────────────────
+  const { data: counselorUsers = [] } = useQuery({
+    queryKey: ["counselors"],
+    queryFn: () => getUsers("COUNSELOR"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ── Refresh handler with spinner ──────────────────
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing || isLoading) return;
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      message.success("Data refreshed");
+    } catch {
+      message.error("Failed to refresh");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, isLoading, refetch]);
+
+  // ── Client-side search filter ─────────────────────
+  const filtered = useMemo<ApiLead[]>(() => {
+    if (!search.trim()) return rawLeads;
+    const q = search.toLowerCase();
+    return rawLeads.filter(
+      (r) =>
+        r.fullName.toLowerCase().includes(q) ||
+        r.phone.includes(q) ||
+        (r.email?.toLowerCase() ?? "").includes(q),
+    );
+  }, [rawLeads, search]);
+
+  // ── Unique filter values derived from data ────────
+  const sources = useMemo(
+    () => [...new Set(rawLeads.map((r) => r.source).filter(Boolean))],
+    [rawLeads],
+  );
+  const countries = useMemo(
+    () => [...new Set(rawLeads.map((r) => r.country).filter(Boolean))],
+    [rawLeads],
+  );
+
+  // ── Stats ─────────────────────────────────────────
+  const stats = useMemo(
+    () => ({
+      total: rawLeads.length,
+      hot: rawLeads.filter((r) => r.priority === "HOT").length,
+      due: rawLeads.filter(
+        (r) =>
+          r.followUpDate &&
+          r.followUpDate.split("T")[0] <= today &&
+          r.status !== "LOST",
+      ).length,
+      conv: rawLeads.filter((r) => r.status === "CONVERTED").length,
+      lost: rawLeads.filter((r) => r.status === "LOST").length,
+    }),
+    [rawLeads, today],
   );
 
   const hasFilters = !!(
     search ||
-    stageF ||
     sourceF ||
     counselorF ||
     countryF ||
     priorityF ||
     statusF ||
-    lostReasonF ||
     dateRange
   );
 
-  const clearFilters = (): void => {
+  const clearFilters = useCallback(() => {
     setSearch("");
-    setStageF(null);
     setSourceF(null);
     setCounselorF(null);
     setCountryF(null);
     setPriorityF(null);
     setStatusF(null);
-    setLostReasonF(null);
     setDateRange(null);
-  };
+  }, []);
 
-  const stats = useMemo(
-    () => ({
-      total: data.length,
-      hot: data.filter((r) => r.priority === "Hot").length,
-      due: data.filter((r) => r.followUp <= today && r.status === "Active")
-        .length,
-      conv: data.filter((r) => r.stage === "enrolled").length,
-      lost: data.filter((r) => r.status === "Lost").length,
-    }),
-    [data, today],
-  );
-
-  const handleBulkDelete = (): void => {
-    setData((d) => d.filter((r) => !selected.includes(r.key)));
-    message.success(`${selected.length} leads deleted`);
-    setSelected([]);
-  };
-  const handleBulkLost = (): void => {
-    setData((d) =>
-      d.map((r) =>
-        selected.includes(r.key) ? { ...r, status: "Lost" as LeadStatus } : r,
-      ),
-    );
-    message.info(`${selected.length} leads marked as lost`);
-    setSelected([]);
-  };
-  const handleBulkApply = (): void => {
-    if (!bulkValue) return;
-    if (bulkModal === "assign")
-      setData((d) =>
-        d.map((r) =>
-          selected.includes(r.key) ? { ...r, counselor: bulkValue } : r,
-        ),
-      );
-    if (bulkModal === "stage")
-      setData((d) =>
-        d.map((r) =>
-          selected.includes(r.key) ? { ...r, stage: bulkValue as StageId } : r,
-        ),
-      );
-    message.success(`Applied to ${selected.length} leads`);
-    setSelected([]);
-    setBulkModal(null);
-    setBulkValue(null);
-  };
-  const handleDelete = (key: string): void => {
-    setData((d) => d.filter((r) => r.key !== key));
-    message.success("Lead deleted");
-  };
-
-  const rowSel = {
-    selectedRowKeys: selected,
-    onChange: (keys: React.Key[]) => setSelected(keys as string[]),
-    columnWidth: 44,
-  };
-
-  const columns: TableColumnsType<Lead> = [
+  // ── Columns ───────────────────────────────────────
+  const columns: TableColumnsType<ApiLead> = [
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Student
         </span>
       ),
-      dataIndex: "name",
+      dataIndex: "fullName",
       key: "name",
-      width: 130,
+      width: 200,
       fixed: "left",
-      sorter: (a, b) => a.name.localeCompare(b.name),
-      render: (name: string, rec: Lead) => (
+      sorter: (a: ApiLead, b: ApiLead) => a.fullName.localeCompare(b.fullName),
+      render: (name: string, rec: ApiLead) => (
         <div className="flex items-center gap-2.5 py-0.5">
           <Avatar name={name} size={34} />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
               {name}
             </div>
-            <div className="text-[11px] text-slate-400 truncate">
-              {rec.country}
+            <div className="text-[11px] text-slate-400 truncate flex items-center gap-1">
+              <RiGlobalLine size={9} /> {rec.country}
             </div>
           </div>
-          {rec.status === "Lost" && (
+          {rec.status === "LOST" && (
             <Tooltip title="Lost">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 ml-auto" />
             </Tooltip>
@@ -685,62 +644,67 @@ const AllLeadsPage: React.FC = () => {
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Contact
         </span>
       ),
       key: "contact",
-      width: 100,
-      render: (_: unknown, rec: Lead) => (
+      width: 190,
+      render: (_: unknown, rec: ApiLead) => (
         <div className="flex flex-col gap-0.5">
           <a
             href={`tel:${rec.phone}`}
-            className="text-[12px] text-slate-600 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors"
             onClick={(e) => e.stopPropagation()}
+            className="text-xs text-slate-600 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors"
           >
             <RiPhoneLine size={11} className="text-slate-400 shrink-0" />
             {rec.phone}
           </a>
-          <a
-            href={`mailto:${rec.email}`}
-            className="text-[11px] text-slate-400 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors truncate max-w-[200px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <RiMailLine size={11} className="shrink-0" />
-            {rec.email}
-          </a>
+          {rec.email && (
+            <a
+              href={`mailto:${rec.email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] text-slate-400 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors truncate max-w-[200px]"
+            >
+              <RiMailLine size={11} className="shrink-0" />
+              {rec.email}
+            </a>
+          )}
         </div>
       ),
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-          Stage
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Status
         </span>
       ),
-      dataIndex: "stage",
-      key: "stage",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
       align: "center",
-      width: 130,
-      filters: STAGES.map((s) => ({ text: s.label, value: s.id })),
-      onFilter: (v, r) => r.stage === v,
-      render: (sid: StageId) => <StagePill sid={sid} />,
+      sorter: (a: ApiLead, b: ApiLead) => a.status.localeCompare(b.status),
+      render: (s: ApiLeadStatus) => (
+        <div className="flex justify-center">
+          <StatusBadge s={s} />
+        </div>
+      ),
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Source
         </span>
       ),
       dataIndex: "source",
       key: "source",
-      width: 100,
+      width: 120,
       align: "center",
       render: (src: string) => <SrcBadge src={src} />,
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Priority
         </span>
       ),
@@ -748,10 +712,9 @@ const AllLeadsPage: React.FC = () => {
       key: "priority",
       width: 90,
       align: "center",
-      sorter: (a, b) =>
-        ["Hot", "Warm", "Cold"].indexOf(a.priority) -
-        ["Hot", "Warm", "Cold"].indexOf(b.priority),
-      render: (p: Priority) => (
+      sorter: (a: ApiLead, b: ApiLead) =>
+        PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
+      render: (p: LeadPriority) => (
         <div className="flex justify-center">
           <PriBadge p={p} />
         </div>
@@ -759,34 +722,38 @@ const AllLeadsPage: React.FC = () => {
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Counselor
         </span>
       ),
-      dataIndex: "counselor",
       key: "counselor",
-      width: 120,
+      width: 130,
       align: "center",
-      render: (c: string) => (
-        <div className="flex items-center justify-center gap-1.5">
-          <Avatar name={c} size={22} />
-          <span className="text-[12px] text-slate-600">{c.split(" ")[0]}</span>
-        </div>
-      ),
+      render: (_: unknown, rec: ApiLead) => {
+        const name = rec.counselor?.name;
+        return !name ? (
+          <span className="text-[11px] text-slate-300">Unassigned</span>
+        ) : (
+          <div className="flex items-center justify-center gap-1.5">
+            <Avatar name={name} size={22} />
+            <span className="text-xs text-slate-600">{name.split(" ")[0]}</span>
+          </div>
+        );
+      },
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           IELTS
         </span>
       ),
       dataIndex: "ieltsScore",
       key: "ielts",
-      width: 60,
+      width: 70,
       align: "center",
-      render: (v: string | null) =>
-        v ? (
-          <span className="text-[12px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-200">
+      render: (v: number | null) =>
+        v != null ? (
+          <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-200">
             {v}
           </span>
         ) : (
@@ -795,111 +762,77 @@ const AllLeadsPage: React.FC = () => {
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Follow-up
         </span>
       ),
-      dataIndex: "followUp",
+      dataIndex: "followUpDate",
       key: "followUp",
-      width: 110,
+      width: 115,
       align: "center",
-      sorter: (a, b) =>
-        new Date(a.followUp).getTime() - new Date(b.followUp).getTime(),
-      render: (date: string) => {
-        const overdue = date < today;
-        const isToday = date === today;
-
+      sorter: (a: ApiLead, b: ApiLead) =>
+        new Date(a.followUpDate ?? 0).getTime() -
+        new Date(b.followUpDate ?? 0).getTime(),
+      render: (date: string | null) => {
+        if (!date) return <span className="text-[11px] text-slate-300">—</span>;
+        const d = date.split("T")[0];
+        const overdue = d < today;
+        const isToday = d === today;
         return (
-          <div className="flex justify-center">
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${
-                overdue
-                  ? "bg-red-50 text-red-600 border-red-200"
-                  : isToday
-                    ? "bg-amber-50 text-amber-600 border-amber-200"
-                    : "bg-slate-50 text-slate-500 border-slate-200"
-              }`}
-            >
-              <RiCalendarLine size={11} />
-              {new Date(date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-              {overdue && <RiErrorWarningLine size={11} className="ml-0.5" />}
-            </span>
-          </div>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${
+              overdue
+                ? "bg-red-50 text-red-600 border-red-200"
+                : isToday
+                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200"
+            }`}
+          >
+            <RiCalendarLine size={10} />
+            {new Date(date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+            {overdue && <RiErrorWarningLine size={10} className="ml-0.5" />}
+          </span>
         );
       },
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-          Status
-        </span>
-      ),
-      dataIndex: "status",
-      key: "status",
-      width: 90,
-      align: "center",
-      filters: [
-        { text: "Active", value: "Active" },
-        { text: "Lost", value: "Lost" },
-      ],
-      onFilter: (v, r) => r.status === v,
-      render: (s: LeadStatus) => (
-        <div className="flex justify-center">
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-              s === "Active"
-                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                : "bg-red-50 text-red-500 border-red-200"
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                s === "Active" ? "bg-emerald-400" : "bg-red-400"
-              }`}
-            />
-            {s}
-          </span>
-        </div>
-      ),
-    },
-    {
-      title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Notes
         </span>
       ),
-      dataIndex: "notesCount",
       key: "notes",
-      width: 70,
+      width: 75,
       align: "center",
-      render: (n: number) => (
-        <div className="flex justify-center">
-          <button
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold cursor-pointer ${
+      render: (_: unknown, rec: ApiLead) => {
+        const n = rec.notes?.length ?? 0;
+        return (
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${
               n > 0
-                ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
-            } transition-colors`}
+                ? "bg-blue-50 text-blue-600 border-blue-200"
+                : "bg-slate-50 text-slate-400 border-slate-200"
+            }`}
           >
             <RiStickyNoteLine size={11} />
             {n}
-          </button>
-        </div>
-      ),
+          </span>
+        );
+      },
     },
     {
       title: (
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           Created
         </span>
       ),
       dataIndex: "createdAt",
       key: "createdAt",
-      width: 90,
-      sorter: (a, b) =>
+      width: 95,
+      sorter: (a: ApiLead, b: ApiLead) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       render: (d: string) => (
         <span className="text-[11px] text-slate-400">
@@ -911,131 +844,15 @@ const AllLeadsPage: React.FC = () => {
         </span>
       ),
     },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 60,
-      fixed: "right",
-      render: (_: unknown, rec: Lead) => {
-        const nextStage =
-          STAGES[STAGES.findIndex((s) => s.id === rec.stage) + 1];
-        const items: MenuProps["items"] = [
-          {
-            key: "view",
-            label: (
-              <span className="flex items-center gap-2 text-[13px]">
-                <RiEyeLine size={14} />
-                View Details
-              </span>
-            ),
-          },
-          {
-            key: "edit",
-            label: (
-              <span className="flex items-center gap-2 text-[13px]">
-                <RiPencilLine size={14} />
-                Edit Lead
-              </span>
-            ),
-          },
-          {
-            key: "call",
-            label: (
-              <span className="flex items-center gap-2 text-[13px]">
-                <RiPhoneLine size={14} />
-                Call Now
-              </span>
-            ),
-          },
-          {
-            key: "email",
-            label: (
-              <span className="flex items-center gap-2 text-[13px]">
-                <RiMailLine size={14} />
-                Send Email
-              </span>
-            ),
-          },
-          ...(nextStage
-            ? [
-                { type: "divider" as const },
-                {
-                  key: "move",
-                  label: (
-                    <span className="flex items-center gap-2 text-[13px] text-blue-600">
-                      <RiArrowRightLine size={14} />
-                      Move to {nextStage.label}
-                    </span>
-                  ),
-                },
-              ]
-            : []),
-          { type: "divider" as const },
-          {
-            key: "lost",
-            label: (
-              <span className="flex items-center gap-2 text-[13px] text-red-500">
-                <RiCloseCircleLine size={14} />
-                Mark as Lost
-              </span>
-            ),
-          },
-          {
-            key: "delete",
-            label: (
-              <span className="flex items-center gap-2 text-[13px] text-red-500">
-                <RiDeleteBinLine size={14} />
-                Delete Lead
-              </span>
-            ),
-            danger: true,
-          },
-        ];
-        const onMenuClick: MenuProps["onClick"] = ({ key }) => {
-          if (key === "view") setDetailLead(rec);
-          if (key === "move" && nextStage) {
-            setData((d) =>
-              d.map((r) =>
-                r.key === rec.key ? { ...r, stage: nextStage.id } : r,
-              ),
-            );
-            message.success(`Moved to ${nextStage.label}`);
-          }
-          if (key === "lost") {
-            setData((d) =>
-              d.map((r) =>
-                r.key === rec.key ? { ...r, status: "Lost" as LeadStatus } : r,
-              ),
-            );
-            message.info("Marked as lost");
-          }
-          if (key === "delete") handleDelete(rec.key);
-        };
-        return (
-          <Dropdown
-            menu={{ items, onClick: onMenuClick }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="w-7 h-7 rounded-lg flex items-center justify-center bg-transparent hover:bg-slate-100 border-none cursor-pointer text-slate-400 hover:text-slate-700 transition-colors"
-            >
-              <RiMoreLine size={15} />
-            </button>
-          </Dropdown>
-        );
-      },
-    },
   ];
 
-  // ── RENDER ────────────────────────────────────
+  // ── RENDER ────────────────────────────────────────
   return (
     <ConfigProvider
       theme={{
         token: {
           colorPrimary: "#2563EB",
-          borderRadius: 8,
+          borderRadius: 10,
           fontFamily: "inherit",
           fontSize: 13,
         },
@@ -1051,35 +868,45 @@ const AllLeadsPage: React.FC = () => {
             fontSize: 13,
             selectionColumnWidth: 44,
           },
-          Select: { borderRadius: 8 },
-          Input: { borderRadius: 8 },
-          Button: { borderRadius: 8 },
-          Modal: { borderRadiusLG: 12 },
+          Select: { borderRadius: 10 },
+          Input: { borderRadius: 10 },
+          Modal: { borderRadiusLG: 14 },
         },
       }}
     >
-      <div className="flex flex-col gap-4 w-full p-5">
-        {/* ── PAGE HEADER ── */}
+      <div className="flex flex-col gap-5 w-full p-5">
+        {/* ── HEADER ── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2.5 mb-0.5">
+            <div className="flex items-center gap-2.5 mb-1">
               <h1 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">
                 All Leads
               </h1>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[12px] font-bold border border-slate-200">
-                {filtered.length}
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold border border-slate-200">
+                {isLoading ? "…" : filtered.length}
               </span>
             </div>
-            <p className="text-[13px] text-slate-400 ">
-              Manage, track and convert all student leads across every stage.
+            <p className="text-[13px] text-slate-400">
+              Manage, track and convert all student leads.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
+            <Tooltip title="Refresh data">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isLoading}
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 cursor-pointer transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Refresh data"
+              >
+                {isRefreshing ? (
+                  <Spin size="small" />
+                ) : (
+                  <RiRefreshLine size={15} />
+                )}
+              </button>
+            </Tooltip>
+            <button className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
               <RiDownloadLine size={14} /> Export
-            </button>
-            <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-[13px] font-bold cursor-pointer border-none shadow-sm shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all duration-150">
-              <RiAddLine size={15} /> Add Lead
             </button>
           </div>
         </div>
@@ -1091,45 +918,50 @@ const AllLeadsPage: React.FC = () => {
             value={stats.total}
             icon={RiUserLine}
             colorCls="bg-blue-50 text-blue-500"
-            barCls="bg-blue-500"
+            barCls="bg-gradient-to-r from-blue-400 to-blue-600"
             delta={12}
+            loading={isLoading}
           />
           <StatCard
             label="Hot Leads"
             value={stats.hot}
             icon={RiFireLine}
             colorCls="bg-red-50 text-red-500"
-            barCls="bg-red-500"
+            barCls="bg-gradient-to-r from-red-400 to-red-600"
             delta={5}
+            loading={isLoading}
           />
           <StatCard
             label="Follow-ups Due"
             value={stats.due}
             icon={RiTimeLine}
             colorCls="bg-amber-50 text-amber-500"
-            barCls="bg-amber-500"
+            barCls="bg-gradient-to-r from-amber-400 to-amber-600"
             delta={-3}
+            loading={isLoading}
           />
           <StatCard
             label="Converted"
             value={stats.conv}
             icon={RiCheckboxCircleLine}
             colorCls="bg-emerald-50 text-emerald-500"
-            barCls="bg-emerald-500"
+            barCls="bg-gradient-to-r from-emerald-400 to-emerald-600"
             delta={8}
+            loading={isLoading}
           />
           <StatCard
             label="Lost"
             value={stats.lost}
             icon={RiCloseCircleLine}
             colorCls="bg-slate-100 text-slate-500"
-            barCls="bg-slate-400"
+            barCls="bg-gradient-to-r from-slate-300 to-slate-500"
             delta={-2}
+            loading={isLoading}
           />
         </div>
 
         {/* ── FILTERS ── */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
             <div className="flex items-center gap-3">
               <button
@@ -1139,35 +971,28 @@ const AllLeadsPage: React.FC = () => {
                 Filters
                 <RiArrowDownSLine
                   size={14}
-                  className={`transition-transform duration-200 text-slate-400 ${showFilters ? "rotate-180" : ""}`}
+                  className={`transition-transform duration-200 text-slate-400 ${
+                    showFilters ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               {hasFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
-                >
-                  <RiFilterOffLine size={10} /> Clear All
-                </button>
-              )}
-              {hasFilters && (
-                <span className="text-[11px] text-slate-400">
-                  {filtered.length} of {data.length} leads
-                </span>
+                <>
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
+                  >
+                    <RiFilterOffLine size={10} /> Clear All
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    {filtered.length} of {rawLeads.length} leads
+                  </span>
+                </>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {!hasFilters && (
-                <span className="text-[12px] text-slate-400">
-                  {filtered.length} leads
-                </span>
-              )}
-              <Tooltip title="Refresh">
-                <button className="w-7 h-7 rounded-lg bg-transparent border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
-                  <RiRefreshLine size={13} />
-                </button>
-              </Tooltip>
-            </div>
+            <span className="text-xs text-slate-400">
+              {isLoading ? "Loading…" : `${filtered.length} leads`}
+            </span>
           </div>
 
           {showFilters && (
@@ -1178,88 +1003,108 @@ const AllLeadsPage: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 allowClear
-                style={{ width: 220 }}
-                className="!rounded-lg !text-[13px]"
-              />
-              <Select
-                value={stageF}
-                onChange={setStageF}
-                placeholder="Stage"
-                allowClear
-                style={{ width: 145 }}
-                options={STAGES.map((s) => ({
-                  value: s.id,
-                  label: (
-                    <span className="flex items-center gap-1.5 text-[12px]">
-                      <span>{s.icon}</span>
-                      {s.label}
-                    </span>
-                  ),
-                }))}
+                className="!w-[280px] !rounded-xl !text-[13px]"
               />
               <Select
                 value={sourceF}
                 onChange={setSourceF}
                 placeholder="Source"
                 allowClear
-                style={{ width: 130 }}
-                options={SOURCES.map((s) => ({ value: s, label: s }))}
+                className="!w-[150px]"
+                options={sources.map((s) => ({
+                  value: s,
+                  label: formatSourceLabel(s),
+                }))}
               />
               <Select
                 value={counselorF}
                 onChange={setCounselorF}
                 placeholder="Counselor"
                 allowClear
-                style={{ width: 145 }}
-                options={COUNSELORS.map((c) => ({ value: c, label: c }))}
+                className="!w-[145px]"
+                options={counselorUsers.map((u) => ({
+                  value: u.name,
+                  label: u.name,
+                }))}
               />
               <Select
                 value={countryF}
                 onChange={setCountryF}
                 placeholder="Country"
                 allowClear
-                style={{ width: 130 }}
-                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                className="!w-[130px]"
+                options={countries.map((c) => ({ value: c, label: c }))}
               />
               <Select
                 value={priorityF}
                 onChange={setPriorityF}
                 placeholder="Priority"
                 allowClear
-                style={{ width: 110 }}
-                options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+                className="!w-[120px]"
+                options={[
+                  {
+                    value: "HOT" as LeadPriority,
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <RiFireLine size={12} className="text-red-500" />
+                        Hot
+                      </span>
+                    ),
+                  },
+                  {
+                    value: "WARM" as LeadPriority,
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <RiFlashlightLine
+                          size={12}
+                          className="text-amber-500"
+                        />
+                        Warm
+                      </span>
+                    ),
+                  },
+                  {
+                    value: "COLD" as LeadPriority,
+                    label: (
+                      <span className="flex items-center gap-1.5">
+                        <RiSnowflakeLine size={12} className="text-blue-500" />
+                        Cold
+                      </span>
+                    ),
+                  },
+                ]}
               />
               <Select
                 value={statusF}
                 onChange={setStatusF}
                 placeholder="Status"
                 allowClear
-                style={{ width: 105 }}
-                options={STATUSES.map((s) => ({ value: s, label: s }))}
-              />
-              <Select
-                value={lostReasonF}
-                onChange={setLostReasonF}
-                placeholder="Lost Reason"
-                allowClear
-                style={{ width: 155 }}
-                options={LOST_REASONS.map((r) => ({ value: r, label: r }))}
+                className="!w-[130px]"
+                options={[
+                  { value: "NEW" as ApiLeadStatus, label: "New" },
+                  {
+                    value: "IN_PROGRESS" as ApiLeadStatus,
+                    label: "In Progress",
+                  },
+                  { value: "CONVERTED" as ApiLeadStatus, label: "Converted" },
+                  { value: "LOST" as ApiLeadStatus, label: "Lost" },
+                ]}
               />
               <RangePicker
                 value={dateRange}
                 onChange={(val) => setDateRange(val as DateRangeValue)}
-                className="!rounded-lg"
+                className="!rounded-xl"
                 format="MMM D"
-                placeholder={["Follow-up from", "to"]}
-                style={{ width: 230 }}
+                placeholder={["Created from", "Created to"]}
+                style={{ width: 280 }}
               />
             </div>
           )}
         </div>
 
-        {/* ── SELECTED SUMMARY ── */}
+        {/* ── SELECTED BAR ── */}
         {selected.length > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-[13px] font-semibold text-blue-700">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-2xl text-[13px] font-semibold text-blue-700">
             <RiCheckLine size={14} />
             {selected.length} lead{selected.length > 1 ? "s" : ""} selected
             <span className="mx-1 text-blue-300">·</span>
@@ -1269,135 +1114,122 @@ const AllLeadsPage: React.FC = () => {
             >
               Assign counselor
             </button>
-            <span className="text-blue-300">·</span>
-            <button
-              onClick={() => setBulkModal("stage")}
-              className="underline underline-offset-2 bg-transparent border-none cursor-pointer text-blue-600 hover:text-blue-800 font-semibold text-[13px]"
-            >
-              Change stage
-            </button>
-            <span className="text-blue-300">·</span>
-            <button
-              onClick={handleBulkLost}
-              className="underline underline-offset-2 bg-transparent border-none cursor-pointer text-red-600 hover:text-red-800 font-semibold text-[13px]"
-            >
-              Mark lost
-            </button>
-            <span className="text-blue-300">·</span>
-            <Popconfirm
-              title={`Delete ${selected.length} leads?`}
-              onConfirm={handleBulkDelete}
-              okText="Delete"
-              okButtonProps={{ danger: true }}
-            >
-              <button className="underline underline-offset-2 bg-transparent border-none cursor-pointer text-red-600 hover:text-red-800 font-semibold text-[13px]">
-                Delete
-              </button>
-            </Popconfirm>
             <button
               onClick={() => setSelected([])}
-              className="ml-auto text-blue-500 hover:text-blue-700 bg-transparent border-none cursor-pointer text-[12px] font-medium"
+              className="ml-auto text-blue-500 hover:text-blue-700 bg-transparent border-none cursor-pointer text-xs font-medium"
             >
               ✕ Clear
             </button>
           </div>
         )}
 
-        {/* ── TABLE — with scroll hint shadow ── */}
-        <div
-          className="bg-white rounded-xl border border-slate-100 shadow-sm leads-table-wrap relative"
-          style={{ overflow: "hidden" }}
-        >
-          {/* Scroll hint gradient on right edge */}
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent z-10 rounded-r-xl" />
+        {/* ── TABLE ── */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden relative">
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent z-10 rounded-r-2xl" />
 
-          <Table
-            rowSelection={rowSel}
-            dataSource={filtered}
-            columns={columns}
-            rowKey="key"
-            scroll={{ x: "max-content", y: 600 }}
-            size="small"
-            onRow={(rec) => ({
-              onClick: () => setDetailLead(rec),
-              className: `cursor-pointer transition-colors ${rec.status === "Lost" ? "opacity-60" : ""}`,
-            })}
-            pagination={{
-              pageSize: 15,
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "15", "25", "50"],
-              showTotal: (t, r) => (
-                <span className="text-[12px] text-slate-400">
-                  {r[0]}–{r[1]} of{" "}
-                  <strong className="text-slate-600">{t}</strong> leads
-                </span>
-              ),
-              style: {
-                padding: "10px 16px",
-                borderTop: "1px solid #F1F5F9",
-                margin: 0,
-              },
-            }}
-            locale={{
-              emptyText: (
-                <div className="py-16 flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-                    <RiTeamLine size={24} className="text-slate-300" />
+          {isError && (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <RiCloseCircleLine size={32} className="text-red-300" />
+              <p className="text-sm font-semibold text-slate-500">
+                Failed to load leads
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="text-[13px] text-blue-600 underline bg-transparent border-none cursor-pointer"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!isError && (
+            <Table
+              rowSelection={{
+                selectedRowKeys: selected,
+                onChange: (keys) => setSelected(keys as string[]),
+                columnWidth: 44,
+              }}
+              dataSource={filtered}
+              columns={columns}
+              rowKey="id"
+              scroll={{ x: "max-content", y: 560 }}
+              size="small"
+              loading={{
+                spinning: isLoading,
+                indicator: (
+                  <RiLoader4Line
+                    size={24}
+                    className="animate-spin text-blue-500"
+                  />
+                ),
+              }}
+              onRow={(rec: ApiLead) => ({
+                onClick: () => setDetailLead(rec),
+                className: `cursor-pointer transition-colors ${
+                  rec.status === "LOST" ? "opacity-60" : ""
+                }`,
+              })}
+              pagination={{
+                pageSize: 15,
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "15", "25", "50"],
+                showTotal: (t: number, r: [number, number]) => (
+                  <span className="text-xs text-slate-400">
+                    {r[0]}–{r[1]} of{" "}
+                    <strong className="text-slate-600">{t}</strong> leads
+                  </span>
+                ),
+              }}
+              locale={{
+                emptyText: (
+                  <div className="py-16 flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <RiTeamLine size={24} className="text-slate-300" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-400">
+                      No leads found
+                    </p>
+                    {hasFilters && (
+                      <button
+                        onClick={clearFilters}
+                        className="text-[13px] text-blue-600 underline bg-transparent border-none cursor-pointer"
+                      >
+                        Clear filters
+                      </button>
+                    )}
                   </div>
-                  <p className="text-[14px] font-semibold text-slate-400">
-                    No leads match your filters
-                  </p>
-                  {hasFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-[13px] text-blue-600 underline bg-transparent border-none cursor-pointer"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-              ),
-            }}
-          />
+                ),
+              }}
+            />
+          )}
         </div>
       </div>
 
-      {/* ── BULK ACTION FLOATING BAR ── */}
-      <BulkBar
-        selected={selected}
-        total={data.length}
-        onClear={() => setSelected([])}
-        onAssign={() => setBulkModal("assign")}
-        onStage={() => setBulkModal("stage")}
-        onLost={handleBulkLost}
-        onDelete={handleBulkDelete}
-        onExport={() => message.info("Exporting...")}
-      />
-
-      {/* ── BULK MODAL ── */}
+      {/* ── BULK ASSIGN MODAL ── */}
       <Modal
         open={!!bulkModal}
         onCancel={() => {
           setBulkModal(null);
           setBulkValue(null);
         }}
-        onOk={handleBulkApply}
+        onOk={() => {
+          message.success(`Assigned ${selected.length} leads`);
+          setSelected([]);
+          setBulkModal(null);
+          setBulkValue(null);
+        }}
         okText="Apply"
         okButtonProps={{ disabled: !bulkValue, type: "primary" }}
         title={
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              {bulkModal === "assign" ? (
-                <RiUserSmileLine size={16} className="text-blue-600" />
-              ) : (
-                <RiArrowRightLine size={16} className="text-blue-600" />
-              )}
+              <RiUserSmileLine size={16} className="text-blue-600" />
             </div>
             <div>
-              <div className="text-[14px] font-bold text-slate-900">
-                {bulkModal === "assign" ? "Assign Counselor" : "Change Stage"}
+              <div className="text-sm font-bold text-slate-900">
+                Assign Counselor
               </div>
-              <div className="text-[12px] text-slate-400 font-normal">
+              <div className="text-xs text-slate-400 font-normal">
                 Apply to {selected.length} selected lead
                 {selected.length > 1 ? "s" : ""}
               </div>
@@ -1407,209 +1239,31 @@ const AllLeadsPage: React.FC = () => {
         width={420}
       >
         <div className="pt-2">
-          <label className="block text-[12px] font-semibold text-slate-600 mb-2">
-            {bulkModal === "assign" ? "Select Counselor" : "Select Stage"}
+          <label className="block text-xs font-semibold text-slate-600 mb-2">
+            Select Counselor
           </label>
-          {bulkModal === "assign" ? (
-            <Select
-              value={bulkValue}
-              onChange={setBulkValue}
-              placeholder="Choose counselor…"
-              style={{ width: "100%" }}
-              size="large"
-              options={COUNSELORS.map((c) => ({ value: c, label: c }))}
-            />
-          ) : (
-            <Select
-              value={bulkValue}
-              onChange={setBulkValue}
-              placeholder="Choose stage…"
-              style={{ width: "100%" }}
-              size="large"
-              options={STAGES.map((s) => ({
-                value: s.id,
-                label: (
-                  <span className="flex items-center gap-2">
-                    {s.icon} {s.label}
-                  </span>
-                ),
-              }))}
-            />
-          )}
+          <Select
+            value={bulkValue}
+            onChange={setBulkValue}
+            placeholder="Choose counselor…"
+            className="!w-full"
+            size="large"
+            options={counselorUsers.map((u) => ({
+              value: u.name,
+              label: u.name,
+            }))}
+          />
         </div>
       </Modal>
 
-      {/* ── LEAD DETAIL DRAWER ── */}
-      <Drawer
-        open={!!detailLead}
-        onClose={() => setDetailLead(null)}
-        width={440}
-        title={null}
-        styles={{
-          body: { padding: 0, background: "#F8FAFC" },
-          header: { display: "none" },
-        }}
-      >
-        {detailLead &&
-          (() => {
-            const s = STAGES.find((x) => x.id === detailLead.stage);
-            const fu = detailLead.followUp;
-            const od = fu < today;
-            return (
-              <>
-                <div
-                  className="px-6 pt-6 pb-5 relative overflow-hidden"
-                  style={{
-                    background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
-                  }}
-                >
-                  <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/[0.07]" />
-                  <div className="absolute -bottom-6 left-20 w-24 h-24 rounded-full bg-white/[0.05]" />
-                  <div className="flex items-start justify-between relative z-10">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={detailLead.name} size={46} />
-                      <div>
-                        <h2 className="text-[18px] font-black text-white leading-tight">
-                          {detailLead.name}
-                        </h2>
-                        <p className="text-[12px] text-white/60 mt-0.5">
-                          {detailLead.country} · {detailLead.source}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setDetailLead(null)}
-                      className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex gap-2 mt-4 flex-wrap relative z-10">
-                    {s && (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/20 text-white border border-white/25">
-                        {s.icon} {s.label}
-                      </span>
-                    )}
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/20 text-white border border-white/25">
-                      <PriBadge p={detailLead.priority} />
-                    </span>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${detailLead.status === "Active" ? "bg-emerald-400/20 text-emerald-200 border-emerald-300/30" : "bg-red-400/20 text-red-200 border-red-300/30"}`}
-                    >
-                      {detailLead.status}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-5 flex flex-col gap-3">
-                  <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                      Contact Info
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      <a
-                        href={`tel:${detailLead.phone}`}
-                        className="flex items-center gap-2.5 text-[13px] text-slate-700 hover:text-blue-600 no-underline transition-colors"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                          <RiPhoneLine size={13} className="text-blue-500" />
-                        </div>
-                        {detailLead.phone}
-                      </a>
-                      <a
-                        href={`mailto:${detailLead.email}`}
-                        className="flex items-center gap-2.5 text-[13px] text-slate-700 hover:text-blue-600 no-underline transition-colors"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                          <RiMailLine size={13} className="text-blue-500" />
-                        </div>
-                        {detailLead.email}
-                      </a>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                      Lead Details
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { label: "Counselor", value: detailLead.counselor },
-                        { label: "Source", value: detailLead.source },
-                        { label: "Country", value: detailLead.country },
-                        {
-                          label: "IELTS Score",
-                          value: detailLead.ieltsScore || "—",
-                        },
-                        {
-                          label: "Created",
-                          value: new Date(
-                            detailLead.createdAt,
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }),
-                        },
-                        {
-                          label: "Notes",
-                          value: `${detailLead.notesCount} note${detailLead.notesCount !== 1 ? "s" : ""}`,
-                        },
-                      ].map(({ label, value }) => (
-                        <div key={label}>
-                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
-                            {label}
-                          </p>
-                          <p className="text-[13px] font-semibold text-slate-700">
-                            {value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div
-                    className={`rounded-xl border p-4 shadow-sm ${od ? "bg-red-50 border-red-200" : "bg-white border-slate-100"}`}
-                  >
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                      Follow-up Date
-                    </p>
-                    <div
-                      className={`flex items-center gap-2 text-[14px] font-bold ${od ? "text-red-600" : "text-slate-800"}`}
-                    >
-                      <RiCalendarLine size={16} />
-                      {new Date(fu).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                      {od && (
-                        <span className="text-[11px] font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 ml-1">
-                          Overdue
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {detailLead.lostReason && (
-                    <div className="bg-red-50 rounded-xl border border-red-200 p-4">
-                      <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">
-                        Lost Reason
-                      </p>
-                      <p className="text-[13px] font-semibold text-red-700">
-                        {detailLead.lostReason}
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-1">
-                    <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 text-white text-[13px] font-bold border-none cursor-pointer hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
-                      <RiPencilLine size={14} /> Edit Lead
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white text-slate-700 text-[13px] font-semibold border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
-                      <RiStickyNoteLine size={14} /> Add Note
-                    </button>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-      </Drawer>
+      {/* ── DETAIL DRAWER ── */}
+      {detailLead && (
+        <DetailDrawer
+          lead={detailLead}
+          today={today}
+          onClose={() => setDetailLead(null)}
+        />
+      )}
     </ConfigProvider>
   );
 };

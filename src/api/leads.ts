@@ -38,7 +38,7 @@ export const createLead = async (
   (await axiosInstance.post<CreateLeadResponse>("/leads", payload)).data;
 
 // ─── Update (PATCH) ───────────────────────────────────
-// All fields are optional — send only what changed
+
 export interface UpdateLeadPayload {
   fullName?: string;
   phone?: string;
@@ -111,6 +111,10 @@ export interface ApiLead {
 export const getLeads = async (params?: GetLeadsParams): Promise<ApiLead[]> =>
   (await axiosInstance.get<ApiLead[]>("/leads", { params })).data;
 
+// ─── Get single lead ──────────────────────────────────
+export const getLeadById = async (id: string): Promise<ApiLead> =>
+  (await axiosInstance.get<ApiLead>(`/leads/${id}`)).data;
+
 // ─── Activity ─────────────────────────────────────────
 export interface ApiActivityUser {
   id: string;
@@ -132,3 +136,87 @@ export interface ApiActivity {
 
 export const getLeadActivity = async (leadId: string): Promise<ApiActivity[]> =>
   (await axiosInstance.get<ApiActivity[]>(`/leads/${leadId}/activity`)).data;
+
+// ─── Mark Lost ────────────────────────────────────────
+export interface MarkLostPayload {
+  lostReason: string;
+  additionalNotes?: string;
+}
+
+export const markLeadAsLost = async (
+  id: string,
+  payload: MarkLostPayload,
+): Promise<ApiLead> =>
+  (await axiosInstance.post<ApiLead>(`/leads/${id}/mark-lost`, payload)).data;
+
+// ─── Log Call ─────────────────────────────────────────
+export type CallOutcomeApi =
+  | "INTERESTED"
+  | "NOT_INTERESTED"
+  | "SCHEDULE_CALLBACK"
+  | "NO_ANSWER"
+  | "VOICEMAIL"
+  | "CONVERTED";
+
+export interface LogCallPayload {
+  outcome: CallOutcomeApi;
+  notes?: string;
+  duration: number; // seconds
+  rating?: number | null; // 1–5
+  followUpDate?: string | null; // ISO string e.g. "2026-03-15T10:00:00.000Z"
+}
+
+export interface LogCallResponse {
+  id: string;
+  outcome: CallOutcomeApi;
+  notes?: string;
+  duration: number;
+  rating?: number | null;
+  followUpDate?: string | null;
+  leadId: string;
+  userId: string;
+  createdAt: string;
+}
+
+export const logCall = async (
+  leadId: string,
+  payload: LogCallPayload,
+): Promise<LogCallResponse> =>
+  (await axiosInstance.post<LogCallResponse>(`/leads/${leadId}/call`, payload))
+    .data;
+
+// ─── Get Call Logs ────────────────────────────────────
+export interface CallLogSummary {
+  totalCalls: number;
+  avgDurationSeconds: number;
+  conversions: number;
+  outcomeCounts: Partial<Record<CallOutcomeApi, number>>;
+}
+
+export interface ApiCallLog {
+  id: string;
+  type: string;
+  message: string;
+  meta: {
+    notes?: string;
+    rating?: number;
+    outcome?: CallOutcomeApi;
+    duration?: number;
+    followUpDate?: string | null;
+  } | null;
+  leadId: string;
+  userId: string | null;
+  createdAt: string;
+  user: { id: string; name: string; email: string; role: string } | null;
+}
+
+export interface GetCallLogsResponse {
+  summary: CallLogSummary;
+  calls: ApiCallLog[];
+}
+
+export const getCallLogs = async (
+  leadId: string,
+): Promise<GetCallLogsResponse> =>
+  (await axiosInstance.get<GetCallLogsResponse>(`/leads/${leadId}/call-logs`))
+    .data;

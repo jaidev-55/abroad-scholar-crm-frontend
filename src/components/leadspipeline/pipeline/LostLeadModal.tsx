@@ -11,7 +11,7 @@ import {
 import CustomModal from "../../common/CustomModal";
 import CustomSelect from "../../common/CustomSelect";
 import { useForm } from "react-hook-form";
-import type { Lead } from "../../../types/lead.types";
+import type { Lead } from "../../../types/lead";
 
 type Priority = "Hot" | "Warm" | "Cold";
 
@@ -22,14 +22,14 @@ interface Props {
 }
 
 const LOST_REASONS = [
-  "Budget constraints",
-  "Chose another agency",
-  "Decided not to study abroad",
-  "Visa rejected",
-  "Unresponsive",
-  "Poor IELTS score",
-  "Family issues",
-  "Other",
+  { value: "NO_RESPONSE", label: "No Response" },
+  { value: "NOT_INTERESTED", label: "Not Interested" },
+  { value: "FINANCIAL_ISSUE", label: "Financial Issue" },
+  { value: "CHOSE_OTHER_CONSULTANT", label: "Chose Another Agency" },
+  { value: "NOT_ELIGIBLE", label: "Not Eligible" },
+  { value: "DUPLICATE_LEAD", label: "Duplicate Lead" },
+  { value: "VISA_REJECTED", label: "Visa Rejected" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const PRIORITY_CONFIG: Record<
@@ -229,7 +229,7 @@ const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
               control={control}
               errors={errors}
               rules={{ required: "Lost reason is required" }}
-              options={LOST_REASONS.map((r) => ({ value: r, label: r }))}
+              options={LOST_REASONS}
               onChange={(v: string) => setReason(v ?? "")}
             />
 

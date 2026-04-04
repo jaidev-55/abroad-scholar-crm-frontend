@@ -23,14 +23,23 @@ import LostLeadModal from "../../components/leadspipeline/pipeline/LostLeadModal
 import LeadNotesDrawer from "../../components/leadspipeline/pipeline/LeadNotesDrawer";
 import ExportModal from "../../components/leadspipeline/export/ExportModal";
 import { STAGES } from "../../components/leadspipeline/constants";
-import type { Note, DateRangeValue, Lead } from "../../types/lead.types";
+
+import type { Note, DateRangeValue, Lead } from "../../types/lead";
 import {
   getLeads,
   updateLead,
+  markLeadAsLost,
   type ApiLead,
   type LeadStatus,
 } from "../../api/leads";
 
+// ─── Helper: check if ISO date string is today ───────────────────────────────
+const isTodayDate = (dateStr?: string): boolean => {
+  if (!dateStr) return false;
+  return new Date(dateStr).toDateString() === new Date().toDateString();
+};
+
+// ─── Transform API lead → local Lead ─────────────────────────────────────────
 function apiLeadToLocal(a: ApiLead): Lead {
   const statusToStage: Record<string, string> = {
     NEW: "new",
@@ -60,6 +69,7 @@ function apiLeadToLocal(a: ApiLead): Lead {
       author: a.counselor?.name ?? "Admin",
     })),
     createdAt: a.createdAt.split("T")[0],
+    updatedAt: a.updatedAt, // ✅ pass through full ISO string
   };
 }
 
@@ -126,25 +136,23 @@ const LeadsPipeline: React.FC = () => {
         search: search || undefined,
         source: sourceFilter || undefined,
         country: countryFilter || undefined,
-        // API expects uppercase priority values
         priority: priorityFilter ? priorityFilter.toUpperCase() : undefined,
         followUpFrom: dateRange?.[0]?.format("YYYY-MM-DD"),
         followUpTo: dateRange?.[1]?.format("YYYY-MM-DD"),
       }),
-    // Keep previous data visible while new results load (prevents board flicker)
     placeholderData: (prev) => prev,
   });
 
   // Convert API shape → local shape once per fetch
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
 
-  // ── Counselor filter is client-side (API takes counselorId, not name) ─────
+  // ── Counselor filter is client-side ───────────────────────────────────────
   const filteredLeads = useMemo(() => {
     if (!counselorFilter) return leads;
     return leads.filter((l) => l.counselor === counselorFilter);
   }, [leads, counselorFilter]);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Stats — converted & lost count today only ─────────────────────────────
   const stats = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
     return {
@@ -152,12 +160,16 @@ const LeadsPipeline: React.FC = () => {
       newToday: leads.filter((l) => l.createdAt === today).length,
       followUpsDue: leads.filter((l) => l.followUp && l.followUp <= today)
         .length,
-      converted: leads.filter((l) => l.stage === "converted").length,
-      lost: leads.filter((l) => l.stage === "lost").length,
+      // ✅ converted & lost: only count leads updated today
+      converted: leads.filter(
+        (l) => l.stage === "converted" && isTodayDate(l.updatedAt),
+      ).length,
+      lost: leads.filter((l) => l.stage === "lost" && isTodayDate(l.updatedAt))
+        .length,
     };
   }, [leads]);
 
-  // ── Mutation: move lead to a new stage (drag-and-drop) ────────────────────
+  // ── Mutation: move lead (drag-and-drop) ───────────────────────────────────
   const { mutate: moveLeadMutation } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) =>
       updateLead(id, { status }),
@@ -167,11 +179,9 @@ const LeadsPipeline: React.FC = () => {
     },
     onError: (error: unknown) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      console.error("Move lead error:", error);
       const axiosError = error as {
         response?: { data?: { message?: string } };
       };
-      console.error("Response:", axiosError?.response?.data);
       message.error(
         axiosError?.response?.data?.message ||
           "Failed to move lead. Please try again.",
@@ -181,13 +191,30 @@ const LeadsPipeline: React.FC = () => {
 
   // ── Mutation: mark lead as lost ───────────────────────────────────────────
   const { mutate: markLostMutation } = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      updateLead(id, { status: "LOST", lostReason: reason }),
+    mutationFn: ({
+      id,
+      reason,
+      notes,
+    }: {
+      id: string;
+      reason: string;
+      notes: string;
+    }) =>
+      markLeadAsLost(id, {
+        lostReason: reason,
+        additionalNotes: notes || undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      message.success("Lead marked as lost.");
     },
-    onError: () => {
-      message.error("Failed to mark lead as lost. Please try again.");
+    onError: (error: unknown) => {
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
+      message.error(
+        axiosError?.response?.data?.message || "Failed to mark lead as lost.",
+      );
     },
   });
 
@@ -211,7 +238,6 @@ const LeadsPipeline: React.FC = () => {
   const handleDragOver = (e: DragOverEvent) => {
     const { over } = e;
     if (!over) return;
-
     const overId = over.id as string;
     const stage = STAGES.find((s) => s.id === overId);
     if (stage) {
@@ -241,27 +267,32 @@ const LeadsPipeline: React.FC = () => {
     const newStatus = STAGE_TO_STATUS[newStage];
     if (!newStatus) return;
 
-    // If dragging to "lost", open the reason modal instead of moving directly
+    // If dragging to "lost", open reason modal
     if (newStage === "lost") {
       setLostModalLead(movingLead);
       return;
     }
 
-    // Optimistically update the cache so the board reflects the move instantly
+    // ✅ Optimistic update — include updatedAt: now so converted/lost stays visible today
     queryClient.setQueryData<ApiLead[]>(
       queryKey,
       (old) =>
         old?.map((l) =>
-          l.id === active.id ? { ...l, status: newStatus } : l,
+          l.id === active.id
+            ? {
+                ...l,
+                status: newStatus,
+                updatedAt: new Date().toISOString(),
+              }
+            : l,
         ) ?? [],
     );
 
     moveLeadMutation({ id: active.id as string, status: newStatus });
   };
 
-  // ── Note handler ─────────────────────────────────────────────────────────
+  // ── Note handler ──────────────────────────────────────────────────────────
   const handleAddNote = (leadId: string, text: string) => {
-    // Immediately reflect the new note in the open drawer (no flicker)
     if (notesDrawerLead?.id === leadId) {
       const optimisticNote: Note = {
         id: `note-optimistic-${Date.now()}`,
@@ -273,13 +304,12 @@ const LeadsPipeline: React.FC = () => {
         prev ? { ...prev, notes: [...prev.notes, optimisticNote] } : prev,
       );
     }
-
     addNoteMutation({ id: leadId, text });
   };
 
   // ── Lost lead handler ─────────────────────────────────────────────────────
-  const handleSaveLost = (leadId: string, reason: string) => {
-    markLostMutation({ id: leadId, reason });
+  const handleSaveLost = (leadId: string, reason: string, notes: string) => {
+    markLostMutation({ id: leadId, reason, notes });
   };
 
   const handleSaveLead = () => {
@@ -306,7 +336,6 @@ const LeadsPipeline: React.FC = () => {
     dateRange
   );
 
-  // ── Error state ───────────────────────────────────────────────────────────
   if (isError) {
     return (
       <div className="flex items-center justify-center h-full py-32 text-slate-400">
@@ -343,7 +372,6 @@ const LeadsPipeline: React.FC = () => {
           onDateRangeChange={setDateRange}
         />
 
-        {/* Board wrapped in a relative container for the loading overlay */}
         <div className="relative">
           {isLoading && (
             <div className="absolute inset-0 z-10 flex items-start justify-center pt-24 bg-white/60 rounded-2xl backdrop-blur-[2px]">
@@ -366,11 +394,18 @@ const LeadsPipeline: React.FC = () => {
               onMoveTo: (leadId: string, stageId: string) => {
                 const newStatus = STAGE_TO_STATUS[stageId];
                 if (!newStatus) return;
+
                 queryClient.setQueryData<ApiLead[]>(
                   queryKey,
                   (old) =>
                     old?.map((l) =>
-                      l.id === leadId ? { ...l, status: newStatus } : l,
+                      l.id === leadId
+                        ? {
+                            ...l,
+                            status: newStatus,
+                            updatedAt: new Date().toISOString(), // ✅
+                          }
+                        : l,
                     ) ?? [],
                 );
                 moveLeadMutation({ id: leadId, status: newStatus });
@@ -418,7 +453,10 @@ const LeadsPipeline: React.FC = () => {
 
       <ViewLeadDrawer
         lead={viewDrawerLead}
-        onClose={() => setViewDrawerLead(null)}
+        onClose={() => {
+          setViewDrawerLead(null);
+          setNotesDrawerLead(null);
+        }}
         onOpenNotes={(lead) => {
           setViewDrawerLead(null);
           setNotesDrawerLead(lead);
