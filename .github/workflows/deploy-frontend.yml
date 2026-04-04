@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -21,17 +21,13 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            if [ ! -d "/root/abroad-scholar-frontend" ]; then
-              git clone https://github.com/jaidev-55/abroad-scholar-crm-frontend.git /root/abroad-scholar-frontend
-            fi
-
-            cd /root/abroad-scholar-frontend
+            cd /home/deployer/abroad-scholar-frontend
             git pull origin main
 
-            docker build -t abroad-scholar-frontend .
-            docker stop frontend || true
-            docker rm frontend || true
-            docker run -d \
+            sudo docker build -t abroad-scholar-frontend .
+            sudo docker stop frontend || true
+            sudo docker rm frontend || true
+            sudo docker run -d \
               --name frontend \
               --restart always \
               -p 3000:80 \
