@@ -16,8 +16,8 @@ import {
   // RiVisaLine,
   // RiGraduationCapLine,
   RiLineChartLine,
-  RiSettings3Line,
-  RiLockPasswordLine,
+  // RiSettings3Line,
+  // RiLockPasswordLine,
   RiProfileLine,
   // RiTeamLine,
 } from "react-icons/ri";
@@ -489,7 +489,7 @@ const AdminLayout = () => {
                       {/* Menu Items */}
                       <div className="py-2">
                         <Link
-                          to="/admin/profile"
+                          to="/admin/my-profile"
                           className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
                           onClick={() => setIsProfileDropdownOpen(false)}
                         >
@@ -497,23 +497,23 @@ const AdminLayout = () => {
                           <span className="font-medium">My Profile</span>
                         </Link>
 
-                        <Link
+                        {/* <Link
                           to="/admin/settings"
                           className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
                           onClick={() => setIsProfileDropdownOpen(false)}
                         >
                           <RiSettings3Line className="w-5 h-5 shrink-0" />
                           <span className="font-medium">System Settings</span>
-                        </Link>
+                        </Link> */}
 
-                        <Link
+                        {/* <Link
                           to="/admin/change-password"
                           className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
                           onClick={() => setIsProfileDropdownOpen(false)}
                         >
                           <RiLockPasswordLine className="w-5 h-5 shrink-0" />
                           <span className="font-medium">Change Password</span>
-                        </Link>
+                        </Link> */}
                       </div>
 
                       {/* Logout Section */}
