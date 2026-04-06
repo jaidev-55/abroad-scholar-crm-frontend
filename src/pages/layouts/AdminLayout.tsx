@@ -231,7 +231,7 @@ const AdminLayout = () => {
         <div className="flex items-center justify-between p-4 border-b border-gray-200 min-h-[65px]">
           <div
             className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/admin/leads-pipeline")}
           >
             <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
               <BsBriefcase className="text-white" size={20} />

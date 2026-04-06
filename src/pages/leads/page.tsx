@@ -266,6 +266,7 @@ const LeadsPipeline: React.FC = () => {
 
     setTimeout(() => {
       setViewDrawerLead(lead);
+      // ✅ Fix: correct path with /admin/ prefix
       window.history.replaceState({}, "", "/admin/leads-pipeline");
     }, 100);
   }, [leads, isLoading]);
