@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { message, Spin } from "antd";
 import {
   PointerSensor,
@@ -23,7 +23,6 @@ import LostLeadModal from "../../components/leadspipeline/pipeline/LostLeadModal
 import LeadNotesDrawer from "../../components/leadspipeline/pipeline/LeadNotesDrawer";
 import ExportModal from "../../components/leadspipeline/export/ExportModal";
 import { STAGES } from "../../components/leadspipeline/constants";
-
 import type { Note, DateRangeValue, Lead } from "../../types/lead";
 import {
   getLeads,
@@ -69,7 +68,7 @@ function apiLeadToLocal(a: ApiLead): Lead {
       author: a.counselor?.name ?? "Admin",
     })),
     createdAt: a.createdAt.split("T")[0],
-    updatedAt: a.updatedAt, // ✅ pass through full ISO string
+    updatedAt: a.updatedAt,
   };
 }
 
@@ -160,7 +159,7 @@ const LeadsPipeline: React.FC = () => {
       newToday: leads.filter((l) => l.createdAt === today).length,
       followUpsDue: leads.filter((l) => l.followUp && l.followUp <= today)
         .length,
-      // ✅ converted & lost: only count leads updated today
+
       converted: leads.filter(
         (l) => l.stage === "converted" && isTodayDate(l.updatedAt),
       ).length,
@@ -248,6 +247,24 @@ const LeadsPipeline: React.FC = () => {
     }
   };
 
+  // ── Auto-open lead from email link ────────────────────────────────────────
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get("leadId");
+    if (!leadId) return;
+
+    const lead = leads.find((l) => l.id === leadId);
+    if (lead) {
+      setTimeout(() => {
+        setViewDrawerLead(lead);
+        window.history.replaceState({}, "", "/admin/leads-pipeline");
+      }, 0);
+    }
+  }, [leads, isLoading]);
+
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     setActiveId(null);
@@ -273,7 +290,7 @@ const LeadsPipeline: React.FC = () => {
       return;
     }
 
-    // ✅ Optimistic update — include updatedAt: now so converted/lost stays visible today
+    //  Optimistic update — include updatedAt: now so converted/lost stays visible today
     queryClient.setQueryData<ApiLead[]>(
       queryKey,
       (old) =>

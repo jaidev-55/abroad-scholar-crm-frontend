@@ -46,8 +46,6 @@ type ActivityType =
   | "followup_set"
   | "overdue";
 
-// ─── Replace the ActivityEvent interface ─────────────
-
 interface CallMeta {
   duration?: number;
   outcome?: string;
@@ -589,7 +587,6 @@ function apiLeadToLocal(a: ApiLead): Lead {
   };
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────
 const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose }) => {
   const [activeTab, setActiveTab] = useState<"notes" | "details" | "activity">(
     "notes",
@@ -600,15 +597,13 @@ const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose }) => {
   const [activitySearch, setActivitySearch] = useState("");
   const [newNote, setNewNote] = useState("");
 
-  // ── Fetch fresh lead data ─────────────────────────────────────────────────
+  // Fetch fresh lead data
   const { data: freshLead, isLoading: leadLoading } = useQuery({
     queryKey: ["lead", lead?.id],
     queryFn: () => getLeadById(lead!.id),
     enabled: !!lead?.id,
-    select: apiLeadToLocal, // ✅ transform happens here
-    placeholderData: lead // ✅ show prop data instantly while fetching
-      ? undefined
-      : undefined,
+    select: apiLeadToLocal,
+    placeholderData: lead ? undefined : undefined,
   });
 
   const displayLead = freshLead ?? lead;

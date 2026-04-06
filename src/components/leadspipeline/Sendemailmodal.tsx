@@ -24,8 +24,6 @@ import type { Dayjs } from "dayjs";
 import CustomModal from "../common/CustomModal";
 import CustomDatePicker from "../common/CustomDatePicker";
 
-
-
 // ═══════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -678,7 +676,6 @@ const SendEmailModal: React.FC<Props> = ({ lead, onClose, onEmailSent }) => {
                 name="followUpDate"
                 label="Follow-up Date & Time"
                 placeholder="When to follow up after sending?"
-                showTime
                 control={control}
                 errors={errors}
               />
