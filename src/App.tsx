@@ -28,7 +28,7 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/ForgotPasswordPage" element={<ForgotPasswordPage />} />
         {/* Default redirect */}
-        {/* <Route path="/" element={<Navigate to="/" replace />} /> */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Admin layout */}
         <Route path="/admin" element={<AdminLayout />}>
