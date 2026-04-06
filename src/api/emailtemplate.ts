@@ -47,33 +47,52 @@ export const createEmailTemplate = async (
 export const deleteEmailTemplate = async (id: string): Promise<EmailTemplate> =>
   (await axiosInstance.delete<EmailTemplate>(`/email-templates/${id}`)).data;
 
-// ─── Send email to lead ──────────────────────────────
-export interface SendEmailPayload {
-  subject: string;
-  message: string;
-  templateId?: string;
-  attachment?: File;
+// ─── Send email using template ───────────────────────
+export interface SendTemplateEmailPayload {
+  templateId: string;
 }
 
 export interface SendEmailResponse {
-  success: boolean;
   message: string;
 }
 
 export const sendEmailToLead = async (
   leadId: string,
-  payload: SendEmailPayload,
+  payload: SendTemplateEmailPayload,
+): Promise<SendEmailResponse> =>
+  (
+    await axiosInstance.post<SendEmailResponse>(
+      `/leads/${leadId}/send-template-email`,
+      payload,
+      { timeout: 30000 },
+    )
+  ).data;
+
+// ─── Send custom email (without template) ────────────
+export interface SendCustomEmailPayload {
+  subject: string;
+  message: string;
+  attachment?: File;
+}
+
+export const sendCustomEmail = async (
+  leadId: string,
+  payload: SendCustomEmailPayload,
 ): Promise<SendEmailResponse> => {
   const formData = new FormData();
   formData.append("subject", payload.subject);
   formData.append("message", payload.message);
-  if (payload.templateId) formData.append("templateId", payload.templateId);
-  if (payload.attachment) formData.append("attachment", payload.attachment);
+  if (payload.attachment) {
+    formData.append("attachment", payload.attachment);
+  }
   return (
     await axiosInstance.post<SendEmailResponse>(
       `/leads/${leadId}/send-email`,
       formData,
-      { headers: { "Content-Type": "multipart/form-data" } },
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000,
+      },
     )
   ).data;
 };

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 
 interface Props {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   children: React.ReactNode;
 }
 
@@ -19,7 +19,7 @@ const CustomModal: React.FC<Props> = ({ open, onClose, children }) => {
     <div
       ref={overlayRef}
       onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
+        if (e.target === overlayRef.current) onClose?.();
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
     >
