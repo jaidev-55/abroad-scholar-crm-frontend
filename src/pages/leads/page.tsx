@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { message, Spin } from "antd";
 import {
   PointerSensor,
@@ -248,21 +248,26 @@ const LeadsPipeline: React.FC = () => {
   };
 
   // ── Auto-open lead from email link ────────────────────────────────────────
+  const autoOpenDone = useRef(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || autoOpenDone.current) return;
+    if (leads.length === 0) return;
 
     const params = new URLSearchParams(window.location.search);
     const leadId = params.get("leadId");
+
+    autoOpenDone.current = true;
+
     if (!leadId) return;
 
     const lead = leads.find((l) => l.id === leadId);
-    if (lead) {
-      setTimeout(() => {
-        setViewDrawerLead(lead);
-        window.history.replaceState({}, "", "/admin/leads-pipeline");
-      }, 0);
-    }
+    if (!lead) return;
+
+    setTimeout(() => {
+      setViewDrawerLead(lead);
+      window.history.replaceState({}, "", "/admin/leads-pipeline");
+    }, 100);
   }, [leads, isLoading]);
 
   const handleDragEnd = (e: DragEndEvent) => {
