@@ -102,6 +102,9 @@ const LeadsPipeline: React.FC = () => {
   const [editDrawerLead, setEditDrawerLead] = useState<Lead | null>(null);
   const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
   const [emailModalLead, setEmailModalLead] = useState<Lead | null>(null);
+  const [viewDrawerInitialTab, setViewDrawerInitialTab] = useState<
+    "notes" | "details" | "activity"
+  >("notes");
 
   // ── DnD state ─────────────────────────────────────────────────────────────
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -265,8 +268,8 @@ const LeadsPipeline: React.FC = () => {
     if (!lead) return;
 
     setTimeout(() => {
+      setViewDrawerInitialTab("details");
       setViewDrawerLead(lead);
-      // ✅ Fix: correct path with /admin/ prefix
       window.history.replaceState({}, "", "/admin/leads-pipeline");
     }, 100);
   }, [leads, isLoading]);
@@ -475,14 +478,13 @@ const LeadsPipeline: React.FC = () => {
       />
 
       <ViewLeadDrawer
+        key={`${viewDrawerLead?.id}-${viewDrawerInitialTab}`}
         lead={viewDrawerLead}
+        initialTab={viewDrawerInitialTab}
         onClose={() => {
           setViewDrawerLead(null);
           setNotesDrawerLead(null);
-        }}
-        onOpenNotes={(lead) => {
-          setViewDrawerLead(null);
-          setNotesDrawerLead(lead);
+          setViewDrawerInitialTab("notes");
         }}
       />
 

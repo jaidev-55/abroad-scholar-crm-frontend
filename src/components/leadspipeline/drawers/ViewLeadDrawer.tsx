@@ -92,7 +92,7 @@ interface ActivityEvent {
 interface Props {
   lead: Lead | null;
   onClose: () => void;
-  onOpenNotes: (lead: Lead) => void;
+  initialTab?: "notes" | "details" | "activity";
 }
 
 const ACTIVITY_CONFIG: Record<
@@ -587,9 +587,13 @@ function apiLeadToLocal(a: ApiLead): Lead {
   };
 }
 
-const ViewLeadDrawer: React.FC<Props> = ({ lead, onClose }) => {
+const ViewLeadDrawer: React.FC<Props> = ({
+  lead,
+  onClose,
+  initialTab = "notes",
+}) => {
   const [activeTab, setActiveTab] = useState<"notes" | "details" | "activity">(
-    "notes",
+    initialTab,
   );
   const [activityFilter, setActivityFilter] = useState<ActivityType | "all">(
     "all",
