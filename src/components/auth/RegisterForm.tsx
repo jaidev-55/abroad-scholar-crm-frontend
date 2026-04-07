@@ -4,7 +4,7 @@ import {
   FiLock,
   FiUser,
   FiArrowRight,
-  FiBriefcase,
+  // FiBriefcase,
   FiShield,
 } from "react-icons/fi";
 import { useForm } from "react-hook-form";
@@ -18,7 +18,7 @@ export interface RegisterFormValues {
   email: string;
   password: string;
   confirmPassword: string;
-  role: "ADMIN" | "COUNSELLOR";
+  role: "ADMIN" | "COUNSELOR";
 }
 
 interface RegisterFormProps {
@@ -43,14 +43,14 @@ const ROLE_OPTIONS = [
       </span>
     ),
   },
-  {
-    value: "MANAGER",
-    label: (
-      <span className="flex items-center gap-2">
-        <FiBriefcase /> Manager
-      </span>
-    ),
-  },
+  // {
+  //   value: "MANAGER",
+  //   label: (
+  //     <span className="flex items-center gap-2">
+  //       <FiBriefcase /> Manager
+  //     </span>
+  //   ),
+  // },
 ];
 
 const getPasswordStrength = (pw: string) => {
@@ -83,7 +83,7 @@ const RegisterForm = ({ loading, onSubmit }: RegisterFormProps) => {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "COUNSELLOR",
+      role: "COUNSELOR",
     },
   });
 
