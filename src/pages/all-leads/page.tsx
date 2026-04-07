@@ -47,6 +47,8 @@ import {
   type LeadPriority,
 } from "../../api/leads";
 import { getUsers } from "../../api/auth";
+import ExportModal from "../../components/leadspipeline/export/ExportModal";
+import type { Lead } from "../../types/lead";
 
 const { RangePicker } = DatePicker;
 
@@ -498,6 +500,7 @@ const AllLeadsPage: React.FC = () => {
   const [bulkValue, setBulkValue] = useState<string | null>(null);
   const [detailLead, setDetailLead] = useState<ApiLead | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -599,6 +602,36 @@ const AllLeadsPage: React.FC = () => {
     statusF ||
     dateRange
   );
+
+  const apiLeadToLocal = (a: ApiLead): Lead => ({
+    id: a.id,
+    name: a.fullName,
+    phone: a.phone,
+    email: a.email ?? "",
+    country: a.country,
+    source: a.source,
+    status: a.status,
+    stage:
+      {
+        NEW: "new",
+        IN_PROGRESS: "progress",
+        CONVERTED: "converted",
+        LOST: "lost",
+      }[a.status] ?? "new",
+    priority: (a.priority.charAt(0) +
+      a.priority.slice(1).toLowerCase()) as Lead["priority"],
+    counselor: a.counselor?.name ?? "",
+    followUp: a.followUpDate?.split("T")[0] ?? "",
+    ieltsScore: a.ieltsScore != null ? String(a.ieltsScore) : undefined,
+    notes: (a.notes ?? []).map((n) => ({
+      id: n.id,
+      text: n.content,
+      createdAt: n.createdAt,
+      author: a.counselor?.name ?? "Admin",
+    })),
+    createdAt: a.createdAt.split("T")[0],
+    updatedAt: a.updatedAt,
+  });
 
   const clearFilters = useCallback(() => {
     setSearch("");
@@ -905,7 +938,10 @@ const AllLeadsPage: React.FC = () => {
                 )}
               </button>
             </Tooltip>
-            <button className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer transition-all shadow-sm">
+            <button
+              onClick={() => setExportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[13px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer transition-all shadow-sm"
+            >
               <RiDownloadLine size={14} /> Export
             </button>
           </div>
@@ -1255,6 +1291,14 @@ const AllLeadsPage: React.FC = () => {
           />
         </div>
       </Modal>
+
+      {exportModalOpen && (
+        <ExportModal
+          leads={filtered.map(apiLeadToLocal)}
+          allLeads={rawLeads.map(apiLeadToLocal)}
+          onClose={() => setExportModalOpen(false)}
+        />
+      )}
 
       {/* ── DETAIL DRAWER ── */}
       {detailLead && (
