@@ -6,17 +6,22 @@ import {
   RiSearchLine,
 } from "react-icons/ri";
 import { useState } from "react";
-import { COUNSELORS, COUNTRIES, PRIORITIES, SOURCES } from "../constants";
+import { COUNTRIES, PRIORITIES, SOURCES } from "../constants";
 import CustomInput from "../../common/CustomInput";
 import CustomSelect from "../../common/CustomSelect";
 import { useForm } from "react-hook-form";
 import type { DateRangeValue } from "../../../types/lead";
 import CustomDatePicker from "../../common/CustomDatePicker";
 
+interface CounselorUser {
+  id: string;
+  name: string;
+}
 interface FilterBarProps {
   filteredCount: number;
   totalCount: number;
   clearFilters: () => void;
+  counselorUsers: CounselorUser[];
   hasFilters: boolean;
   onExport: () => void;
   onSearchChange: (v: string) => void;
@@ -33,6 +38,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   clearFilters,
   hasFilters,
   onExport,
+  counselorUsers,
   onSearchChange,
   onSourceChange,
   onCounselorChange,
@@ -118,7 +124,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
               placeholder="Search by name or phone…"
               control={control}
               icon={<RiSearchLine size={14} className="text-slate-400" />}
-              // Fire parent immediately on every keystroke
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 onSearchChange(e.target.value)
               }
@@ -132,7 +137,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
               control={control}
               errors={errors}
               options={SOURCES.map((s) => ({ value: s, label: s }))}
-              // Pass empty string when cleared (undefined → "")
               onChange={(v: string) => onSourceChange(v ?? "")}
             />
           </div>
@@ -143,7 +147,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
               placeholder="Counselor"
               control={control}
               errors={errors}
-              options={COUNSELORS.map((c) => ({ value: c, label: c }))}
+              options={counselorUsers.map((u) => ({
+                value: u.name,
+                label: u.name,
+              }))}
               onChange={(v: string) => onCounselorChange(v ?? "")}
             />
           </div>

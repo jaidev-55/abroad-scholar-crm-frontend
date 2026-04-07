@@ -163,9 +163,9 @@ export type CallOutcomeApi =
 export interface LogCallPayload {
   outcome: CallOutcomeApi;
   notes?: string;
-  duration: number; // seconds
-  rating?: number | null; // 1–5
-  followUpDate?: string | null; // ISO string e.g. "2026-03-15T10:00:00.000Z"
+  duration: number;
+  rating?: number | null; 
+  followUpDate?: string | null; 
 }
 
 export interface LogCallResponse {

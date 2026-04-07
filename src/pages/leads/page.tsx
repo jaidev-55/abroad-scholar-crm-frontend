@@ -31,6 +31,7 @@ import {
   type ApiLead,
   type LeadStatus,
 } from "../../api/leads";
+import { getUsers } from "../../api/auth";
 
 // ─── Helper: check if ISO date string is today ───────────────────────────────
 const isTodayDate = (dateStr?: string): boolean => {
@@ -170,6 +171,13 @@ const LeadsPipeline: React.FC = () => {
         .length,
     };
   }, [leads]);
+
+  // ── Fetch counselors for filter ───────────────────
+  const { data: counselorUsers = [] } = useQuery({
+    queryKey: ["counselors"],
+    queryFn: () => getUsers("COUNSELOR"),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // ── Mutation: move lead (drag-and-drop) ───────────────────────────────────
   const { mutate: moveLeadMutation } = useMutation({
@@ -389,6 +397,7 @@ const LeadsPipeline: React.FC = () => {
           totalCount={leads.length}
           clearFilters={clearFilters}
           hasFilters={hasFilters}
+          counselorUsers={counselorUsers}
           onExport={() => setExportModalOpen(true)}
           onSearchChange={setSearch}
           onSourceChange={setSourceFilter}
