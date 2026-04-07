@@ -258,7 +258,6 @@ const LeadModal: React.FC<Props> = ({
     }
   }, [open, defaultStage, reset]);
 
-  // ── Fetch real counselors from API ──────────────────
   const { data: counselorUsers = [], isLoading: counselorsLoading } = useQuery({
     queryKey: ["counselors"],
     queryFn: () => getUsers("COUNSELOR"),
@@ -266,7 +265,7 @@ const LeadModal: React.FC<Props> = ({
   });
 
   const COUNSELOR_OPTIONS = counselorUsers.map((u) => ({
-    value: u.name,
+    value: u.id,
     label: u.name,
   }));
 
@@ -307,15 +306,21 @@ const LeadModal: React.FC<Props> = ({
     const pendingNote = newNote.trim();
     if (pendingNote) currentNotes.push(pendingNote);
 
+    const selectedCounselor = counselorUsers.find(
+      (u) => u.name === data.counselor,
+    );
+
     mutate(
       {
         fullName: data.name.trim(),
         phone: data.phone.trim(),
         email: data.email?.trim() || undefined,
-        country: data.country, // clean value, no emoji
+        country: data.country,
         source: data.source,
         status: stageCfg.apiStatus,
         priority: priorityCfg.apiValue,
+        assignmentType: selectedCounselor ? "MANUAL" : "AUTO",
+        counselorId: selectedCounselor?.id || undefined,
         ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
         followUpDate,
         notes: currentNotes.length > 0 ? currentNotes : undefined,
@@ -357,6 +362,9 @@ const LeadModal: React.FC<Props> = ({
       },
     );
   };
+
+  const selectedCounselorName =
+    counselorUsers.find((u) => u.id === watchedValues.counselor)?.name ?? "";
 
   return (
     <CustomModal open={open} onClose={onClose}>
@@ -634,7 +642,7 @@ const LeadModal: React.FC<Props> = ({
                 <ReviewRow
                   icon={<RiUserSmileLine size={13} />}
                   label="Counselor"
-                  value={watchedValues.counselor}
+                  value={selectedCounselorName}
                 />
                 {watchedValues.followUp && (
                   <ReviewRow

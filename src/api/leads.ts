@@ -13,6 +13,8 @@ export interface CreateLeadPayload {
   source: string;
   status: string;
   priority: string;
+  assignmentType: "AUTO" | "MANUAL";
+  counselorId?: string;
   ieltsScore?: number;
   followUpDate?: string;
   notes?: string[];
