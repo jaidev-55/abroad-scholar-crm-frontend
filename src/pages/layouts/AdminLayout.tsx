@@ -20,6 +20,7 @@ import {
   // RiLockPasswordLine,
   RiProfileLine,
   RiTeamLine,
+  RiLineChartLine,
   // RiVisaLine,
   // RiFileTextLine,
   // RiGraduationCapLine,
@@ -167,12 +168,12 @@ const AdminLayout = () => {
     // },
 
     // ───── SETTINGS ─────
-    // {
-    //   id: "ad-integration",
-    //   icon: RiLineChartLine,
-    //   label: "Ad Integration",
-    //   href: "/admin/ad-integration",
-    // },
+    {
+      id: "ad-integration",
+      icon: RiLineChartLine,
+      label: "Ad Integration",
+      href: "/admin/ad-integration",
+    },
     // {
     //   id: "settings",
     //   icon: RiSettings3Line,
