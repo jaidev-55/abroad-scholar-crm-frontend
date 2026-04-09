@@ -15,10 +15,23 @@ import {
   // RiFileTextLine,
   // RiVisaLine,
   // RiGraduationCapLine,
-  RiLineChartLine,
+  // RiLineChartLine,
   // RiSettings3Line,
   // RiLockPasswordLine,
   RiProfileLine,
+  RiTeamLine,
+  // RiVisaLine,
+  // RiFileTextLine,
+  // RiGraduationCapLine,
+  // RiLockPasswordLine,
+  // RiSettings3Line,
+  // RiTaskLine,
+  // RiUserSettingsLine,
+  // RiTeamLine,
+  // RiBarChartLine,
+  // RiUserUnfollowLine,
+  // RiUserFollowLine,
+  // RiDashboardLine,
   // RiTeamLine,
 } from "react-icons/ri";
 import {
@@ -102,12 +115,12 @@ const AdminLayout = () => {
     // },
 
     // ───── TEAM MANAGEMENT ─────
-    // {
-    //   id: "users",
-    //   icon: RiTeamLine,
-    //   label: "Users",
-    //   href: "/admin/users",
-    // },
+    {
+      id: "users",
+      icon: RiTeamLine,
+      label: "Users",
+      href: "/admin/users",
+    },
     // {
     //   id: "counselors",
     //   icon: RiUserSettingsLine,
@@ -154,12 +167,12 @@ const AdminLayout = () => {
     // },
 
     // ───── SETTINGS ─────
-    {
-      id: "ad-integration",
-      icon: RiLineChartLine,
-      label: "Ad Integration",
-      href: "/admin/ad-integration",
-    },
+    // {
+    //   id: "ad-integration",
+    //   icon: RiLineChartLine,
+    //   label: "Ad Integration",
+    //   href: "/admin/ad-integration",
+    // },
     // {
     //   id: "settings",
     //   icon: RiSettings3Line,

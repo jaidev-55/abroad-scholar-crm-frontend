@@ -164,8 +164,8 @@ export interface LogCallPayload {
   outcome: CallOutcomeApi;
   notes?: string;
   duration: number;
-  rating?: number | null; 
-  followUpDate?: string | null; 
+  rating?: number | null;
+  followUpDate?: string | null;
 }
 
 export interface LogCallResponse {
@@ -222,3 +222,19 @@ export const getCallLogs = async (
 ): Promise<GetCallLogsResponse> =>
   (await axiosInstance.get<GetCallLogsResponse>(`/leads/${leadId}/call-logs`))
     .data;
+
+
+
+// ─── Delete single lead ───────────────────────────────
+export const deleteLead = async (id: string): Promise<{ message: string }> =>
+  (await axiosInstance.delete<{ message: string }>(`/leads/${id}`)).data;
+
+// ─── Bulk delete leads ────────────────────────────────
+export const bulkDeleteLeads = async (
+  ids: string[],
+): Promise<{ message: string }> =>
+  (
+    await axiosInstance.post<{ message: string }>("/leads/bulk-delete", {
+      ids,
+    })
+  ).data;

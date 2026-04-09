@@ -79,7 +79,7 @@ const PipelineBoard: React.FC<PipelineBoardProps> = ({
           <KanbanColumn
             key={stage.id}
             stage={stage}
-            leads={getLeadsForStage(leads, stage.id)} // ✅ filtered per stage
+            leads={getLeadsForStage(leads, stage.id)}
             isOver={overStageId === stage.id}
             onAddToStage={onAddToStage}
             onMarkLost={actionHandlers.onMarkLost}

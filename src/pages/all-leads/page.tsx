@@ -12,8 +12,7 @@ import {
 } from "antd";
 import type { TableColumnsType } from "antd";
 import type { Dayjs } from "dayjs";
-
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   RiSearchLine,
   RiDownloadLine,
@@ -39,9 +38,14 @@ import {
   RiFilterOffLine,
   RiLoader4Line,
   RiGlobalLine,
+  RiDeleteBin6Line,
+  RiDeleteBinLine,
+  RiAlertLine,
 } from "react-icons/ri";
 import {
   getLeads,
+  deleteLead,
+  bulkDeleteLeads,
   type ApiLead,
   type LeadStatus as ApiLeadStatus,
   type LeadPriority,
@@ -106,7 +110,6 @@ const PRIORITY_ORDER: Record<LeadPriority, number> = {
   COLD: 2,
 };
 
-// ─── Source style map ─────────────────────────────────
 const SOURCE_STYLE_MAP: Record<string, string> = {
   INSTAGRAM: "bg-pink-50 text-pink-700 border-pink-200",
   WEBSITE: "bg-blue-50 text-blue-700 border-blue-200",
@@ -120,7 +123,6 @@ const SOURCE_STYLE_MAP: Record<string, string> = {
 
 const DEFAULT_SOURCE_STYLE = "bg-slate-50 text-slate-600 border-slate-200";
 
-// ─── Helpers ──────────────────────────────────────────
 const formatSourceLabel = (src: string): string =>
   src.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -252,17 +254,121 @@ const StatCard: React.FC<StatCardProps> = ({
   </div>
 );
 
+// ─── Delete Confirm Modal ─────────────────────────────
+interface DeleteConfirmModalProps {
+  open: boolean;
+  mode: "single" | "bulk";
+  count?: number;
+  leadName?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
+  open,
+  mode,
+  count = 0,
+  leadName,
+  onConfirm,
+  onCancel,
+  loading,
+}) => (
+  <Modal
+    open={open}
+    onCancel={onCancel}
+    footer={null}
+    width={420}
+    centered
+    closable={!loading}
+    maskClosable={!loading}
+    className="delete-confirm-modal"
+  >
+    <div className="flex flex-col items-center text-center py-2">
+      {/* Icon */}
+      <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center mb-4">
+        <RiDeleteBin6Line size={28} className="text-red-500" />
+      </div>
+
+      {/* Title */}
+      <h3 className="text-[17px] font-black text-slate-900 mb-1.5 leading-tight">
+        {mode === "single"
+          ? "Delete this lead?"
+          : `Delete ${count} lead${count > 1 ? "s" : ""}?`}
+      </h3>
+
+      {/* Description */}
+      <p className="text-[13px] text-slate-500 leading-relaxed max-w-[300px]">
+        {mode === "single" ? (
+          <>
+            <span className="font-semibold text-slate-700">{leadName}</span>{" "}
+            will be permanently removed. All call logs, notes, and activity
+            history will be lost.
+          </>
+        ) : (
+          <>
+            All{" "}
+            <span className="font-semibold text-slate-700">
+              {count} selected leads
+            </span>{" "}
+            and their associated data — notes, calls, and activity — will be
+            permanently deleted.
+          </>
+        )}
+      </p>
+
+      {/* Warning pill */}
+      <div className="flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+        <RiAlertLine size={12} className="text-amber-500 shrink-0" />
+        <span className="text-[11px] font-semibold text-amber-700">
+          This action cannot be undone
+        </span>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex gap-2.5 mt-5 w-full">
+        <button
+          onClick={onCancel}
+          disabled={loading}
+          className="flex-1 h-10 rounded-xl border border-slate-200 text-[13px] font-semibold text-slate-600 bg-white hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className="flex-1 h-10 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Spin size="small" />
+              Deleting…
+            </>
+          ) : (
+            <>
+              <RiDeleteBin6Line size={14} />
+              {mode === "single" ? "Yes, Delete" : `Delete ${count}`}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </Modal>
+);
+
 // ─── Detail Drawer ────────────────────────────────────
 interface DetailDrawerProps {
   lead: ApiLead;
   today: string;
   onClose: () => void;
+  onDelete: (id: string, name: string) => void;
 }
 
 const DetailDrawer: React.FC<DetailDrawerProps> = ({
   lead,
   today,
   onClose,
+  onDelete,
 }) => {
   const fu = lead.followUpDate?.split("T")[0] ?? null;
   const isOverdue = fu ? fu < today : false;
@@ -270,13 +376,10 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
-
-      {/* Drawer panel */}
       <div className="relative w-[460px] h-full bg-slate-50 flex flex-col shadow-2xl">
         {/* Hero header */}
         <div className="px-6 pt-6 pb-5 relative overflow-hidden bg-gradient-to-br from-blue-700 to-blue-500 shrink-0">
@@ -296,13 +399,28 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
-              aria-label="Close drawer"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Delete button in drawer */}
+              <Tooltip title="Delete lead">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(lead.id, lead.fullName);
+                  }}
+                  className="w-8 h-8 rounded-xl bg-red-500/20 hover:bg-red-500/40 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
+                  aria-label="Delete lead"
+                >
+                  <RiDeleteBinLine size={14} />
+                </button>
+              </Tooltip>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
+                aria-label="Close drawer"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-2 mt-4 flex-wrap relative z-10">
@@ -320,9 +438,8 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
           </div>
         </div>
 
-        {/* Scrollable content area */}
+        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-          {/* Contact Info */}
           <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
               Contact Info
@@ -351,7 +468,6 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* Details grid */}
           <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
               Lead Details
@@ -401,7 +517,6 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* Follow-up */}
           {fu && (
             <div
               className={`rounded-2xl border p-4 shadow-sm ${
@@ -433,7 +548,6 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             </div>
           )}
 
-          {/* Lost reason */}
           {lead.lostReason && (
             <div className="bg-red-50 rounded-2xl border border-red-200 p-4 shadow-sm">
               <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">
@@ -445,7 +559,6 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             </div>
           )}
 
-          {/* Notes — scrollable */}
           {noteCount > 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-col">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 shrink-0">
@@ -487,6 +600,8 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
 
 // ─── MAIN PAGE ────────────────────────────────────────
 const AllLeadsPage: React.FC = () => {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [sourceF, setSourceF] = useState<string | null>(null);
   const [counselorF, setCounselorF] = useState<string | null>(null);
@@ -501,6 +616,14 @@ const AllLeadsPage: React.FC = () => {
   const [detailLead, setDetailLead] = useState<ApiLead | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // ── Delete state ──────────────────────────────────
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    mode: "single" | "bulk";
+    id?: string;
+    name?: string;
+  }>({ open: false, mode: "single" });
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -533,14 +656,73 @@ const AllLeadsPage: React.FC = () => {
     placeholderData: (prev) => prev,
   });
 
-  // ── Fetch counselors for filter ───────────────────
   const { data: counselorUsers = [] } = useQuery({
     queryKey: ["counselors"],
     queryFn: () => getUsers("COUNSELOR"),
     staleTime: 5 * 60 * 1000,
   });
 
-  // ── Refresh handler with spinner ──────────────────
+  // ── Delete mutations ──────────────────────────────
+  const singleDeleteMutation = useMutation({
+    mutationFn: (id: string) => deleteLead(id),
+    onSuccess: () => {
+      message.success("Lead deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setDeleteModal({ open: false, mode: "single" });
+      // Close drawer if the deleted lead is open
+      if (detailLead?.id === deleteModal.id) {
+        setDetailLead(null);
+      }
+    },
+    onError: () => {
+      message.error("Failed to delete lead. Please try again.");
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => bulkDeleteLeads(ids),
+    onSuccess: (_, ids) => {
+      message.success(`${ids.length} lead${ids.length > 1 ? "s" : ""} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setSelected([]);
+      setDeleteModal({ open: false, mode: "bulk" });
+    },
+    onError: () => {
+      message.error("Failed to delete leads. Please try again.");
+    },
+  });
+
+  const isDeleting =
+    singleDeleteMutation.isPending || bulkDeleteMutation.isPending;
+
+  // ── Delete handlers ───────────────────────────────
+  const handleSingleDeleteClick = useCallback(
+    (id: string, name: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      setDeleteModal({ open: true, mode: "single", id, name });
+    },
+    [],
+  );
+
+  const handleBulkDeleteClick = useCallback(() => {
+    setDeleteModal({ open: true, mode: "bulk" });
+  }, []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (deleteModal.mode === "single" && deleteModal.id) {
+      singleDeleteMutation.mutate(deleteModal.id);
+    } else if (deleteModal.mode === "bulk") {
+      bulkDeleteMutation.mutate(selected);
+    }
+  }, [deleteModal, selected, singleDeleteMutation, bulkDeleteMutation]);
+
+  const handleDeleteCancel = useCallback(() => {
+    if (!isDeleting) {
+      setDeleteModal({ open: false, mode: "single" });
+    }
+  }, [isDeleting]);
+
+  // ── Refresh ───────────────────────────────────────
   const handleRefresh = useCallback(async () => {
     if (isRefreshing || isLoading) return;
     setIsRefreshing(true);
@@ -566,7 +748,6 @@ const AllLeadsPage: React.FC = () => {
     );
   }, [rawLeads, search]);
 
-  // ── Unique filter values derived from data ────────
   const sources = useMemo(
     () => [...new Set(rawLeads.map((r) => r.source).filter(Boolean))],
     [rawLeads],
@@ -576,7 +757,6 @@ const AllLeadsPage: React.FC = () => {
     [rawLeads],
   );
 
-  // ── Stats ─────────────────────────────────────────
   const stats = useMemo(
     () => ({
       total: rawLeads.length,
@@ -653,26 +833,29 @@ const AllLeadsPage: React.FC = () => {
       ),
       dataIndex: "fullName",
       key: "name",
-      width: 200,
+      width: 150,
       fixed: "left",
+      ellipsis: true,
       sorter: (a: ApiLead, b: ApiLead) => a.fullName.localeCompare(b.fullName),
       render: (name: string, rec: ApiLead) => (
-        <div className="flex items-center gap-2.5 py-0.5">
-          <Avatar name={name} size={34} />
-          <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
-              {name}
+        <Tooltip title={`${name} · ${rec.country ?? ""}`} mouseEnterDelay={0.5}>
+          <div className="flex items-center gap-2.5 py-0.5 w-full overflow-hidden">
+            <Avatar name={name} size={34} />
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
+                {name}
+              </div>
+              <div className="text-[11px] text-slate-400 truncate flex items-center gap-1">
+                <RiGlobalLine size={9} /> {rec.country}
+              </div>
             </div>
-            <div className="text-[11px] text-slate-400 truncate flex items-center gap-1">
-              <RiGlobalLine size={9} /> {rec.country}
-            </div>
+            {rec.status === "LOST" && (
+              <Tooltip title="Lost">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+              </Tooltip>
+            )}
           </div>
-          {rec.status === "LOST" && (
-            <Tooltip title="Lost">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 ml-auto" />
-            </Tooltip>
-          )}
-        </div>
+        </Tooltip>
       ),
     },
     {
@@ -682,7 +865,7 @@ const AllLeadsPage: React.FC = () => {
         </span>
       ),
       key: "contact",
-      width: 190,
+      width: 150,
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex flex-col gap-0.5">
           <a
@@ -877,6 +1060,35 @@ const AllLeadsPage: React.FC = () => {
         </span>
       ),
     },
+    // ── Delete action column ──────────────────────────
+    {
+      title: (
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Action
+        </span>
+      ),
+      key: "action",
+      width: 60,
+      align: "center",
+      fixed: "right",
+      render: (_: unknown, rec: ApiLead) => (
+        <Tooltip title="Delete lead" placement="left">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSingleDeleteClick(rec.id, rec.fullName, e);
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all duration-150 group"
+            aria-label="Delete lead"
+          >
+            <RiDeleteBinLine
+              size={14}
+              className="group-hover:scale-110 transition-transform"
+            />
+          </button>
+        </Tooltip>
+      ),
+    },
   ];
 
   // ── RENDER ────────────────────────────────────────
@@ -907,7 +1119,7 @@ const AllLeadsPage: React.FC = () => {
         },
       }}
     >
-      <div className="flex flex-col gap-5 w-full p-5">
+      <div className="flex flex-col gap-5 w-full">
         {/* ── HEADER ── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -915,9 +1127,6 @@ const AllLeadsPage: React.FC = () => {
               <h1 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">
                 All Leads
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold border border-slate-200">
-                {isLoading ? "…" : filtered.length}
-              </span>
             </div>
             <p className="text-[13px] text-slate-400">
               Manage, track and convert all student leads.
@@ -1007,9 +1216,7 @@ const AllLeadsPage: React.FC = () => {
                 Filters
                 <RiArrowDownSLine
                   size={14}
-                  className={`transition-transform duration-200 text-slate-400 ${
-                    showFilters ? "rotate-180" : ""
-                  }`}
+                  className={`transition-transform duration-200 text-slate-400 ${showFilters ? "rotate-180" : ""}`}
                 />
               </button>
               {hasFilters && (
@@ -1142,14 +1349,30 @@ const AllLeadsPage: React.FC = () => {
         {selected.length > 0 && (
           <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-2xl text-[13px] font-semibold text-blue-700">
             <RiCheckLine size={14} />
-            {selected.length} lead{selected.length > 1 ? "s" : ""} selected
+            <span>
+              {selected.length} lead{selected.length > 1 ? "s" : ""} selected
+            </span>
             <span className="mx-1 text-blue-300">·</span>
+
+            {/* Assign counselor */}
             <button
               onClick={() => setBulkModal("assign")}
               className="underline underline-offset-2 bg-transparent border-none cursor-pointer text-blue-600 hover:text-blue-800 font-semibold text-[13px]"
             >
               Assign counselor
             </button>
+
+            <span className="mx-1 text-blue-300">·</span>
+
+            {/* Bulk delete button */}
+            <button
+              onClick={handleBulkDeleteClick}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold border-none cursor-pointer transition-colors"
+            >
+              <RiDeleteBin6Line size={12} />
+              Delete {selected.length}
+            </button>
+
             <button
               onClick={() => setSelected([])}
               className="ml-auto text-blue-500 hover:text-blue-700 bg-transparent border-none cursor-pointer text-xs font-medium"
@@ -1201,9 +1424,7 @@ const AllLeadsPage: React.FC = () => {
               }}
               onRow={(rec: ApiLead) => ({
                 onClick: () => setDetailLead(rec),
-                className: `cursor-pointer transition-colors ${
-                  rec.status === "LOST" ? "opacity-60" : ""
-                }`,
+                className: `cursor-pointer transition-colors ${rec.status === "LOST" ? "opacity-60" : ""}`,
               })}
               pagination={{
                 pageSize: 15,
@@ -1292,6 +1513,17 @@ const AllLeadsPage: React.FC = () => {
         </div>
       </Modal>
 
+      {/* ── DELETE CONFIRM MODAL ── */}
+      <DeleteConfirmModal
+        open={deleteModal.open}
+        mode={deleteModal.mode}
+        count={selected.length}
+        leadName={deleteModal.name}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        loading={isDeleting}
+      />
+
       {exportModalOpen && (
         <ExportModal
           leads={filtered.map(apiLeadToLocal)}
@@ -1306,6 +1538,7 @@ const AllLeadsPage: React.FC = () => {
           lead={detailLead}
           today={today}
           onClose={() => setDetailLead(null)}
+          onDelete={handleSingleDeleteClick}
         />
       )}
     </ConfigProvider>

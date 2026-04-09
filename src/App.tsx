@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./pages/layouts/AdminLayout";
-import LeadsPipeline from "./pages/leads/page";
+import LeadsPipeline from "./pages/leads-pipeline/page";
 import Dashboardpage from "./pages/dashboard/page";
 import AllLeadsPage from "./pages/all-leads/page";
 import MyProfilePage from "./pages/my-profile/page";

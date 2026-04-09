@@ -32,6 +32,7 @@ import {
   type LeadStatus,
 } from "../../api/leads";
 import { getUsers } from "../../api/auth";
+import GoogleSheetsImportModal from "../../components/leadspipeline/GoogleSheetsImportModal";
 
 // ─── Helper: check if ISO date string is today ───────────────────────────────
 const isTodayDate = (dateStr?: string): boolean => {
@@ -379,6 +380,8 @@ const LeadsPipeline: React.FC = () => {
       </div>
     );
   }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   return (
     <>
@@ -388,6 +391,7 @@ const LeadsPipeline: React.FC = () => {
             setAddModalDefaultStage(undefined);
             setAddModalOpen(true);
           }}
+          onImport={() => setImportModalOpen(true)}
         />
 
         <PipelineStats stats={stats} />
@@ -458,6 +462,15 @@ const LeadsPipeline: React.FC = () => {
           />
         </div>
       </div>
+
+      <GoogleSheetsImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["leads"] });
+          setImportModalOpen(false);
+        }}
+      />
 
       <LeadModal
         open={addModalOpen}
