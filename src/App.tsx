@@ -1,9 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./pages/layouts/AdminLayout";
-import LeadsPipeline from "./pages/leads-pipeline/page";
 import Dashboardpage from "./pages/dashboard/page";
-import AllLeadsPage from "./pages/all-leads/page";
-import MyProfilePage from "./pages/my-profile/page";
 import EnrolledStudentsPage from "./pages/enrolled/page";
 import LostLeadsPage from "./pages/lost-leads/page";
 import CounselorsPage from "./pages/counselors/page";
@@ -14,11 +11,14 @@ import TasksPage from "./pages/tasks/TasksPage";
 import LoginPage from "./pages/auth/Login";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import RegisterPage from "./pages/auth/RegisterPage";
-import UsersPage from "./pages/users/UsersPage";
 import PerformancePage from "./pages/performance/page";
 import ApplicationPage from "./pages/application/page";
 import VisaProcessingPage from "./pages/visaprocess/page";
-import AdIntegrationPage from "./pages/adIntegration/page";
+import LeadsPipelinePage from "./modules/leadsPipeline/page/LeadsPipelinePage";
+import AllLeadsPage from "./modules/all-leads/pages/AllLeadsPage";
+import UsersPage from "./modules/users/pages/UsersPage";
+import ProfilePage from "./modules/my-profile/pages/MyprofilePage";
+import AdIntegrationPage from "./modules/adIntegration/pages/AdIntegrationPage";
 
 const App = () => {
   return (
@@ -36,9 +36,9 @@ const App = () => {
           <Route path="performance" element={<PerformancePage />} />
           <Route path="applications" element={<ApplicationPage />} />
           <Route path="visa" element={<VisaProcessingPage />} />
-          <Route path="leads-pipeline" element={<LeadsPipeline />} />
+          <Route path="leads-pipeline" element={<LeadsPipelinePage />} />
           <Route path="all-leads" element={<AllLeadsPage />} />
-          <Route path="my-profile" element={<MyProfilePage />} />
+          <Route path="my-profile" element={<ProfilePage />} />
           <Route path="enrolled" element={<EnrolledStudentsPage />} />
           <Route path="ad-integration" element={<AdIntegrationPage />} />
           <Route path="lost-leads" element={<LostLeadsPage />} />
