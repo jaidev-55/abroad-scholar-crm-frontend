@@ -5,10 +5,13 @@ import {
   RiCloseLine,
   RiFilterLine,
   RiCheckboxCircleLine,
+  RiFileTextLine,
 } from "react-icons/ri";
 import { SiGooglesheets } from "react-icons/si";
+import { generateLeadsPDF } from "../pdf/pdfGenerator";
+import PdfPreviewCard from "../pdf/PdfPreviewCard";
 
-type ExportFormat = "csv" | "gsheet_csv";
+type ExportFormat = "csv" | "gsheet_csv" | "pdf";
 type ExportScope = "filtered" | "all";
 
 interface ExportField {
@@ -32,7 +35,6 @@ interface ExportableLead {
   notes: { text: string }[];
 }
 
-// Update props:
 interface ExportModalProps {
   leads: ExportableLead[];
   allLeads: ExportableLead[];
@@ -54,7 +56,7 @@ const EXPORT_FIELDS: ExportField[] = [
   { key: "createdAt", label: "Created Date", defaultOn: false },
 ];
 
-// ─── CSV builder ──────────────────────────────────────────────────────────────
+// ─── CSV builder ──────────────────────────────────────────────
 const buildCSV = (leads: ExportableLead[], fields: string[]): string => {
   const activeFields = EXPORT_FIELDS.filter((f) => fields.includes(f.key));
   const headers = activeFields.map((f) => f.label);
@@ -67,7 +69,6 @@ const buildCSV = (leads: ExportableLead[], fields: string[]): string => {
       } else {
         val = String((lead as unknown as Record<string, unknown>)[f.key] ?? "");
       }
-      // Escape commas and quotes
       if (val.includes(",") || val.includes('"') || val.includes("\n")) {
         val = `"${val.replace(/"/g, '""')}"`;
       }
@@ -78,7 +79,6 @@ const buildCSV = (leads: ExportableLead[], fields: string[]): string => {
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
 };
 
-// ─── Download helper ──────────────────────────────────────────────────────────
 const downloadCSV = (content: string, filename: string) => {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -89,13 +89,8 @@ const downloadCSV = (content: string, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-// ─── Google Sheets open helper ────────────────────────────────────────────────
-// Downloads CSV then opens Google Sheets import URL
 const exportToGoogleSheets = (csvContent: string, filename: string) => {
-  // 1. Download the CSV
   downloadCSV(csvContent, filename);
-
-  // 2. Open Google Sheets new sheet — user can then import via File > Import
   setTimeout(() => {
     window.open("https://sheets.new", "_blank");
     message.info(
@@ -103,6 +98,74 @@ const exportToGoogleSheets = (csvContent: string, filename: string) => {
       6,
     );
   }, 500);
+};
+
+// ─── Format option metadata
+const FORMAT_OPTIONS: {
+  value: ExportFormat;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+  color: string;
+}[] = [
+  {
+    value: "csv",
+    label: "CSV File",
+    desc: "Download directly",
+    icon: RiFilterLine,
+    color: "blue",
+  },
+  {
+    value: "gsheet_csv",
+    label: "Google Sheets",
+    desc: "CSV + open Sheets",
+    icon: SiGooglesheets,
+    color: "green",
+  },
+  {
+    value: "pdf",
+    label: "PDF Report",
+    desc: "Branded & print-ready",
+    icon: RiFileTextLine,
+    color: "rose",
+  },
+];
+
+const colorClassMap: Record<
+  string,
+  {
+    border: string;
+    bg: string;
+    iconBg: string;
+    iconText: string;
+    check: string;
+    hoverBorder: string;
+  }
+> = {
+  blue: {
+    border: "border-blue-500",
+    bg: "bg-blue-50",
+    iconBg: "bg-blue-100",
+    iconText: "text-blue-600",
+    check: "text-blue-500",
+    hoverBorder: "hover:border-blue-200",
+  },
+  green: {
+    border: "border-green-500",
+    bg: "bg-green-50",
+    iconBg: "bg-green-100",
+    iconText: "text-green-600",
+    check: "text-green-500",
+    hoverBorder: "hover:border-green-200",
+  },
+  rose: {
+    border: "border-rose-500",
+    bg: "bg-rose-50",
+    iconBg: "bg-rose-100",
+    iconText: "text-rose-600",
+    check: "text-rose-500",
+    hoverBorder: "hover:border-rose-200",
+  },
 };
 
 const ExportModal: React.FC<ExportModalProps> = ({
@@ -133,12 +196,23 @@ const ExportModal: React.FC<ExportModalProps> = ({
     }
     setExporting(true);
     try {
-      const csv = buildCSV(targetLeads, selectedFields);
-      if (format === "gsheet_csv") {
-        exportToGoogleSheets(csv, `${filename}.csv`);
+      if (format === "pdf") {
+        const activeFields = EXPORT_FIELDS.filter((f) =>
+          selectedFields.includes(f.key),
+        ).map((f) => ({ key: f.key, label: f.label }));
+        generateLeadsPDF(targetLeads, activeFields, filename, {
+          title: "Leads Export Report",
+          subtitle: "Abroad Scholar CRM",
+        });
+        message.success(`Exported ${targetLeads.length} leads as PDF!`);
       } else {
-        downloadCSV(csv, `${filename}.csv`);
-        message.success(`Exported ${targetLeads.length} leads!`);
+        const csv = buildCSV(targetLeads, selectedFields);
+        if (format === "gsheet_csv") {
+          exportToGoogleSheets(csv, `${filename}.csv`);
+        } else {
+          downloadCSV(csv, `${filename}.csv`);
+          message.success(`Exported ${targetLeads.length} leads!`);
+        }
       }
       onClose();
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -148,6 +222,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
       setExporting(false);
     }
   };
+
+  const activeFormat = FORMAT_OPTIONS.find((f) => f.value === format)!;
+  const ActiveIcon = activeFormat.icon;
 
   return (
     <Modal
@@ -186,17 +263,13 @@ const ExportModal: React.FC<ExportModalProps> = ({
               disabled={exporting || selectedFields.length === 0}
               className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-40 transition-colors cursor-pointer"
             >
-              {format === "gsheet_csv" ? (
-                <SiGooglesheets size={14} />
-              ) : (
-                <RiDownloadLine size={14} />
-              )}
+              <ActiveIcon size={14} />
               {exporting ? "Exporting…" : "Export"}
             </button>
           </div>
         </div>
       }
-      width={520}
+      width={560}
       closeIcon={<RiCloseLine size={18} />}
     >
       <div className="space-y-5 py-1">
@@ -226,59 +299,45 @@ const ExportModal: React.FC<ExportModalProps> = ({
           </Radio.Group>
         </div>
 
-        {/* Format */}
+        {/* Format — now 3 columns */}
         <div>
           <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2.5">
             Export format
           </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => setFormat("csv")}
-              className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                format === "csv"
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-slate-200 hover:border-blue-200"
-              }`}
-            >
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                <RiFilterLine size={16} className="text-blue-600" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-800">CSV File</p>
-                <p className="text-[10px] text-slate-500">Download directly</p>
-              </div>
-              {format === "csv" && (
-                <RiCheckboxCircleLine
-                  size={16}
-                  className="text-blue-500 ml-auto"
-                />
-              )}
-            </button>
-
-            <button
-              onClick={() => setFormat("gsheet_csv")}
-              className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                format === "gsheet_csv"
-                  ? "border-green-500 bg-green-50"
-                  : "border-slate-200 hover:border-green-200"
-              }`}
-            >
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                <SiGooglesheets size={16} className="text-green-600" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-slate-800">
-                  Google Sheets
-                </p>
-                <p className="text-[10px] text-slate-500">CSV + open Sheets</p>
-              </div>
-              {format === "gsheet_csv" && (
-                <RiCheckboxCircleLine
-                  size={16}
-                  className="text-green-500 ml-auto"
-                />
-              )}
-            </button>
+          <div className="grid grid-cols-3 gap-2.5">
+            {FORMAT_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const c = colorClassMap[opt.color];
+              const active = format === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setFormat(opt.value)}
+                  className={`flex flex-col items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    active
+                      ? `${c.border} ${c.bg}`
+                      : `border-slate-200 ${c.hoverBorder}`
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div
+                      className={`w-8 h-8 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}
+                    >
+                      <Icon size={16} className={c.iconText} />
+                    </div>
+                    {active && (
+                      <RiCheckboxCircleLine size={16} className={c.check} />
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-slate-800">
+                      {opt.label}
+                    </p>
+                    <p className="text-[10px] text-slate-500">{opt.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {format === "gsheet_csv" && (
@@ -286,6 +345,13 @@ const ExportModal: React.FC<ExportModalProps> = ({
               📋 We'll download the CSV and open Google Sheets. Then use{" "}
               <strong>File → Import</strong> to load your data.
             </div>
+          )}
+
+          {format === "pdf" && (
+            <PdfPreviewCard
+              recordCount={targetLeads.length}
+              fieldCount={selectedFields.length}
+            />
           )}
         </div>
 

@@ -21,6 +21,7 @@ import {
   RiProfileLine,
   RiTeamLine,
   RiLineChartLine,
+  RiDashboardLine,
   // RiVisaLine,
   // RiFileTextLine,
   // RiGraduationCapLine,
@@ -76,12 +77,12 @@ const AdminLayout = () => {
 
   const menuItems = [
     // ───── MAIN ─────
-    // {
-    //   id: "dashboard",
-    //   icon: RiDashboardLine,
-    //   label: "Dashboard",
-    //   href: "/admin/dashboard",
-    // },
+    {
+      id: "dashboard",
+      icon: RiDashboardLine,
+      label: "Dashboard",
+      href: "/admin/dashboard",
+    },
     {
       id: "pipeline",
       icon: RiKanbanView,

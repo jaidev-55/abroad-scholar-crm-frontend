@@ -93,7 +93,7 @@ const UserAvatar: React.FC<{ name: string; size?: number }> = ({
 };
 
 const LostLeadModal: React.FC<Props> = ({ lead, onClose, onSave }) => {
-  const [reason, setReason] = useState(""); // ← drives button disabled state
+  const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);

@@ -20,7 +20,6 @@ import LeadModal from "../modals/LeadModal";
 import LostLeadModal from "../modals/LostLeadModal";
 import ExportModal from "../modals/ExportModal";
 import GoogleSheetsImportModal from "../modals/GoogleSheetsImportModal";
-import CallModal from "../modals/CallModal";
 import SendEmailModal from "../modals/SendEmailModal";
 
 import type { Lead, Note, DateRangeValue } from "../types/lead";
@@ -36,6 +35,7 @@ import { getUsers } from "../../../api/auth";
 import { STAGES } from "../utils/constants";
 import { isTodayDate, todayString } from "../utils/dateUtils";
 import { apiLeadToLocal } from "../types/Transformlead";
+import CallModal from "../modals/call/CallModal";
 
 // ─── Stage → API status map ───────────────────────────────────────────────────
 const STAGE_TO_STATUS: Record<string, LeadStatus> = {
@@ -46,11 +46,9 @@ const STAGE_TO_STATUS: Record<string, LeadStatus> = {
   lost: "LOST",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-const LeadsPipelinePage: React.FC = () => {
+const LeadsPipelinePage = () => {
   const queryClient = useQueryClient();
 
-  // ── Filter state ──────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [counselorFilter, setCounselorFilter] = useState("");

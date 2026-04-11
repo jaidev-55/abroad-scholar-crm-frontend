@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./pages/layouts/AdminLayout";
-import Dashboardpage from "./pages/dashboard/page";
+
 import EnrolledStudentsPage from "./pages/enrolled/page";
 import LostLeadsPage from "./pages/lost-leads/page";
 import CounselorsPage from "./pages/counselors/page";
@@ -19,6 +19,7 @@ import AllLeadsPage from "./modules/all-leads/pages/AllLeadsPage";
 import UsersPage from "./modules/users/pages/UsersPage";
 import ProfilePage from "./modules/my-profile/pages/MyprofilePage";
 import AdIntegrationPage from "./modules/adIntegration/pages/AdIntegrationPage";
+import Dashboard from "./modules/dashboard/pages/Dashboard";
 
 const App = () => {
   return (
@@ -32,7 +33,7 @@ const App = () => {
 
         {/* Admin layout */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route path="dashboard" element={<Dashboardpage />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="applications" element={<ApplicationPage />} />
           <Route path="visa" element={<VisaProcessingPage />} />

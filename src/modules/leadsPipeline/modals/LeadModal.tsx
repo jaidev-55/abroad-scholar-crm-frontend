@@ -21,7 +21,7 @@ import {
   RiDeleteBinLine,
 } from "react-icons/ri";
 import type { Dayjs } from "dayjs";
-import type { Lead } from "../types/lead";
+import type { Lead, LeadStage } from "../types/lead";
 import dayjs from "dayjs";
 import { createLead } from "../api/leads";
 import { getUsers } from "../../../api/auth";
@@ -337,7 +337,7 @@ const LeadModal: React.FC<Props> = ({
             country: res.country,
             source: data.source,
             status: stageCfg.apiStatus,
-            stage: data.stage,
+            stage: data.stage as LeadStage,
             priority: data.priority,
             counselor: data.counselor,
             followUp: data.followUp
@@ -351,6 +351,7 @@ const LeadModal: React.FC<Props> = ({
               author: data.counselor || "Admin",
             })),
             createdAt: now.split("T")[0],
+            updatedAt: now.split("T")[0],
           };
 
           message.success("Lead added successfully!");
