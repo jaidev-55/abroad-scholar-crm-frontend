@@ -27,6 +27,7 @@ interface CounselorUser {
 interface FilterBarProps {
   filteredCount: number;
   totalCount: number;
+  dateFilterMode?: "followup" | "created";
   clearFilters: () => void;
   counselorUsers: CounselorUser[];
   hasFilters: boolean;
@@ -41,6 +42,7 @@ interface FilterBarProps {
 
 const FilterBar: React.FC<FilterBarProps> = ({
   filteredCount,
+  dateFilterMode = "followup",
   totalCount,
   clearFilters,
   hasFilters,
@@ -187,8 +189,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
             <CustomDatePicker
               mode="range"
               name="dateRange"
-              label="Date Range"
-              placeholder={["Follow-up from", "Follow-up to"]}
+              label={
+                dateFilterMode === "created" ? "Created Date" : "Follow-up Date"
+              }
+              placeholder={
+                dateFilterMode === "created"
+                  ? ["Created from", "Created to"]
+                  : ["Follow-up from", "Follow-up to"]
+              }
               control={control}
               errors={errors}
               onChange={(v) => onDateRangeChange(v ?? null)}

@@ -57,8 +57,6 @@ const LeadsPipelinePage: React.FC = () => {
   const [countryFilter, setCountryFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
-
-  // ── Modal / drawer state ──────────────────────────────────────────────────
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDefaultStage, setAddModalDefaultStage] = useState<string>();
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -81,7 +79,6 @@ const LeadsPipelinePage: React.FC = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  // ── Stable query key from all active filters ──────────────────────────────
   const queryKey = [
     "leads",
     search,
@@ -93,7 +90,6 @@ const LeadsPipelinePage: React.FC = () => {
     dateRange?.[1]?.format("YYYY-MM-DD") ?? null,
   ] as const;
 
-  // ── Fetch leads ───────────────────────────────────────────────────────────
   const {
     data: rawLeads = [],
     isLoading,
@@ -114,13 +110,11 @@ const LeadsPipelinePage: React.FC = () => {
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
 
-  // Counselor filter is client-side only
   const filteredLeads = useMemo(() => {
     if (!counselorFilter) return leads;
     return leads.filter((l) => l.counselor === counselorFilter);
   }, [leads, counselorFilter]);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const today = todayString();
     return {

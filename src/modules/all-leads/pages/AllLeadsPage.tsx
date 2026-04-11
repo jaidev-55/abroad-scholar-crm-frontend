@@ -86,7 +86,9 @@ const AllLeadsPage: React.FC = () => {
         priority: priorityF ?? undefined,
         status: statusF ?? undefined,
         startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
-        endDate: dateRange?.[1]?.format("YYYY-MM-DD"),
+        endDate: dateRange?.[1]
+          ? dateRange[1].add(1, "day").format("YYYY-MM-DD")
+          : undefined,
       }),
     placeholderData: (prev) => prev,
   });
@@ -275,9 +277,9 @@ const AllLeadsPage: React.FC = () => {
           />
         </div>
 
-        {/* ── FilterBar replaces the old inline filter block ── */}
         <FilterBar
           filteredCount={filtered.length}
+          dateFilterMode="created"
           totalCount={rawLeads.length}
           hasFilters={hasFilters}
           clearFilters={clearFilters}

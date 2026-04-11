@@ -26,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
 import {
   getCallLogs,
+  logCall,
   type ApiCallLog,
   type CallOutcomeApi,
 } from "../api/leads";
@@ -434,20 +435,20 @@ const CallModal: React.FC<Props> = ({ lead, onClose, onCallLogged }) => {
           : null,
       });
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       if (!outcome) return;
       onCallLogged?.({
-        id: response.id,
-        date: response.createdAt,
-        duration: response.duration,
+        id: `call-${Date.now()}`,
+        date: new Date().toISOString(),
+        duration: finalDuration.current,
         outcome,
-        notes: response.notes ?? "",
-        rating: (response.rating as CallRating) ?? null,
+        notes: notes.trim(),
+        rating,
         author: lead!.counselor,
         muted,
         speakerOn: speaker,
-        followUpDate: response.followUpDate
-          ? response.followUpDate.split("T")[0]
+        followUpDate: followUpDateValue
+          ? (followUpDateValue as Dayjs).format("YYYY-MM-DD")
           : null,
       });
       queryClient.invalidateQueries({ queryKey: ["call-logs", lead!.id] });
