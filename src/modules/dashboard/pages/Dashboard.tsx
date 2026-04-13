@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Dayjs } from "dayjs";
 import type { DateRange } from "../utils/constants";
 
 import DashboardHeader from "../components/DashboardHeader";
@@ -18,6 +19,8 @@ export interface DashboardFilterState {
   range: DateRange;
   counselor: string;
   source: string;
+  customStart: Dayjs | null;
+  customEnd: Dayjs | null;
 }
 
 const Dashboard = () => {
@@ -25,6 +28,8 @@ const Dashboard = () => {
     range: "30d",
     counselor: "all",
     source: "all",
+    customStart: null,
+    customEnd: null,
   });
 
   const {
@@ -42,11 +47,22 @@ const Dashboard = () => {
         onRefresh={() => window.location.reload()}
         onExport={() => {}}
       />
+
       <DashboardFilters
         range={filters.range}
-        onRangeChange={(r) => setFilters((p) => ({ ...p, range: r }))}
+        onRangeChange={(r) =>
+          setFilters((p) => ({
+            ...p,
+            range: r,
+            customStart: null,
+            customEnd: null,
+          }))
+        }
         onCounselorChange={(v) => setFilters((p) => ({ ...p, counselor: v }))}
         onSourceChange={(v) => setFilters((p) => ({ ...p, source: v }))}
+        onCustomDateChange={(start, end) =>
+          setFilters((p) => ({ ...p, customStart: start, customEnd: end }))
+        }
       />
 
       <StatsGrid stats={stats} />
