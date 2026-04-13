@@ -12,6 +12,7 @@ const LoginPage = () => {
   const { mutate, isPending } = useMutation({ mutationFn: loginUser });
 
   const onLogin = (data: LoginFormValues) => {
+    console.log("onLogin called", data);
     mutate(
       { email: data.email, password: data.password },
       {
@@ -22,8 +23,16 @@ const LoginPage = () => {
           message.success("Welcome back!");
           navigate("/admin/leads-pipeline");
         },
-        onError: (err) => {
-          message.error(err?.message || "Invalid email or password");
+        onError: (err: any) => {
+          const raw =
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.message ||
+            "Invalid email or password";
+
+          const errorText = Array.isArray(raw) ? raw[0] : raw;
+
+          message.error(errorText, 4);
         },
       },
     );

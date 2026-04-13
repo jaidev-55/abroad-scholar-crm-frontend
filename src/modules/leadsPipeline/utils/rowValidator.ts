@@ -7,6 +7,7 @@ export const VALID_SOURCES = [
   "GOOGLE_ADS",
   "META_ADS",
   "REFERRAL",
+  "GOOGLE_SHEET",
 ] as const;
 export const VALID_PRIORITIES = ["HOT", "WARM", "COLD"] as const;
 
@@ -56,9 +57,9 @@ export const validateRow = (
       ? norm
       : (SOURCE_ALIAS_MAP[upper] ??
         VALID_SOURCES.find((s) => upper.includes(s)) ??
-        "REFERRAL");
+        "GOOGLE_SHEET"); // ← changed from "REFERRAL"
   } else {
-    mapped.source = "REFERRAL";
+    mapped.source = "GOOGLE_SHEET"; // ← changed from "REFERRAL"
   }
 
   if (mapped.priority) {
