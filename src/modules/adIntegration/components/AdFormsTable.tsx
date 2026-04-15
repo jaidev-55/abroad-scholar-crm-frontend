@@ -22,6 +22,8 @@ interface Props {
   onDelete: (id: string) => void;
   onRefresh: () => void;
   onAddNew: () => void;
+  syncPending: boolean;
+  onSync: (id: string) => void;
 }
 
 const AdFormsTable: React.FC<Props> = ({
@@ -31,6 +33,8 @@ const AdFormsTable: React.FC<Props> = ({
   deletePending,
   onToggle,
   onDelete,
+  syncPending,
+  onSync,
   onRefresh,
   onAddNew,
 }) => {
@@ -171,16 +175,24 @@ const AdFormsTable: React.FC<Props> = ({
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
     {
-      title: (
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Action
-        </span>
-      ),
+      title: "Action",
       key: "actions",
-      width: 80,
+      width: 100,
       align: "center",
       render: (_: unknown, record: WebhookConfig) => (
-        <div className="flex justify-center">
+        <div className="flex items-center gap-1 justify-center">
+          <Tooltip title="Sync past leads from Meta">
+            <button
+              onClick={() => onSync(record.id)}
+              disabled={syncPending}
+              className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RiRefreshLine
+                size={16}
+                className={syncPending ? "animate-spin" : ""}
+              />
+            </button>
+          </Tooltip>
           <Popconfirm
             title="Remove this form?"
             description="Leads from this form will no longer sync to CRM."

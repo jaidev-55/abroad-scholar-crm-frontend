@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { message } from "antd";
 import { RiAddLine } from "react-icons/ri";
 import AdStatsRow from "../components/AdStatsRow";
 import HowItWorks from "../components/HowItWorks";
@@ -10,6 +11,7 @@ import {
   addConfig,
   deleteConfig,
   fetchConfigs,
+  syncFormLeads,
   toggleConfig,
   type CreateWebhookConfigPayload,
 } from "../../../api/webhook";
@@ -29,7 +31,14 @@ const AdIntegrationPage: React.FC = () => {
   const addMutation = useMutation({
     mutationFn: addConfig,
     onSuccess: () => {
+      message.success(
+        " Form connected! Past leads are being imported in background.",
+      );
       queryClient.invalidateQueries({ queryKey: ["webhook-configs"] });
+      // Refetch leads list after a short delay so imported leads show up
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }, 3000);
       setModalOpen(false);
     },
   });
@@ -42,8 +51,24 @@ const AdIntegrationPage: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteConfig,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["webhook-configs"] }),
+    onSuccess: () => {
+      message.success("Form removed");
+      queryClient.invalidateQueries({ queryKey: ["webhook-configs"] });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: syncFormLeads,
+    onSuccess: (data) => {
+      message.success(
+        `✅ Synced ${data.synced} leads (${data.skipped} skipped, ${data.total} total)`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["webhook-configs"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: () => {
+      message.error("Sync failed. Please try again.");
+    },
   });
 
   const handleSubmit = (data: CreateWebhookConfigPayload) =>
@@ -79,8 +104,10 @@ const AdIntegrationPage: React.FC = () => {
         isLoading={isLoading}
         togglePending={toggleMutation.isPending}
         deletePending={deleteMutation.isPending}
+        syncPending={syncMutation.isPending}
         onToggle={(id) => toggleMutation.mutate(id)}
         onDelete={(id) => deleteMutation.mutate(id)}
+        onSync={(id) => syncMutation.mutate(id)}
         onRefresh={() =>
           queryClient.invalidateQueries({ queryKey: ["webhook-configs"] })
         }
