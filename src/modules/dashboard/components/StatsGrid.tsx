@@ -8,16 +8,18 @@ import {
   HiOutlineTrendingUp,
   HiOutlineTrendingDown,
 } from "react-icons/hi";
+import type { StatCard } from "../api/dashboard";
 
 interface StatsData {
-  total: number;
-  hot: number;
-  followups: number;
-  converted: number;
-  lost: number;
+  totalLeads: StatCard;
+  hotLeads: StatCard;
+  followUpsDue: StatCard;
+  converted: StatCard;
+  lostLeads: StatCard;
 }
+
 interface Props {
-  stats: StatsData;
+  stats: StatsData | null; // ← accepts null while loading
 }
 
 const StatsGrid: React.FC<Props> = ({ stats }) => {
@@ -25,8 +27,8 @@ const StatsGrid: React.FC<Props> = ({ stats }) => {
     {
       id: "total",
       label: "TOTAL LEADS",
-      value: stats.total,
-      delta: 12,
+      value: stats?.totalLeads.value ?? 0,
+      delta: stats?.totalLeads.change ?? 0,
       icon: <HiOutlineUsers className="h-5 w-5" />,
       accent: "from-blue-500 to-blue-400",
       iconBg: "bg-blue-50",
@@ -35,8 +37,8 @@ const StatsGrid: React.FC<Props> = ({ stats }) => {
     {
       id: "hot",
       label: "HOT LEADS",
-      value: stats.hot,
-      delta: 8,
+      value: stats?.hotLeads.value ?? 0,
+      delta: stats?.hotLeads.change ?? 0,
       icon: <HiOutlineFire className="h-5 w-5" />,
       accent: "from-rose-500 to-pink-400",
       iconBg: "bg-rose-50",
@@ -45,8 +47,8 @@ const StatsGrid: React.FC<Props> = ({ stats }) => {
     {
       id: "followups",
       label: "FOLLOW-UPS DUE",
-      value: stats.followups,
-      delta: -5,
+      value: stats?.followUpsDue.value ?? 0,
+      delta: stats?.followUpsDue.change ?? 0,
       icon: <HiOutlineClock className="h-5 w-5" />,
       accent: "from-amber-500 to-orange-400",
       iconBg: "bg-amber-50",
@@ -55,8 +57,8 @@ const StatsGrid: React.FC<Props> = ({ stats }) => {
     {
       id: "converted",
       label: "CONVERTED",
-      value: stats.converted,
-      delta: 18,
+      value: stats?.converted.value ?? 0,
+      delta: stats?.converted.change ?? 0,
       icon: <HiOutlineCheckCircle className="h-5 w-5" />,
       accent: "from-emerald-500 to-green-400",
       iconBg: "bg-emerald-50",
@@ -65,8 +67,8 @@ const StatsGrid: React.FC<Props> = ({ stats }) => {
     {
       id: "lost",
       label: "LOST LEADS",
-      value: stats.lost,
-      delta: -3,
+      value: stats?.lostLeads.value ?? 0,
+      delta: stats?.lostLeads.change ?? 0,
       icon: <HiOutlineXCircle className="h-5 w-5" />,
       accent: "from-slate-400 to-slate-300",
       iconBg: "bg-slate-100",

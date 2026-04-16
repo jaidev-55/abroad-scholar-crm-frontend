@@ -260,11 +260,12 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
       dataIndex: "createdAt",
+      defaultSortOrder: "descend",
       key: "createdAt",
       width: 95,
       sorter: (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      render: (d: string) => (
+      render: (d: string) => (   
         <span className="text-[11px] text-slate-400">
           {new Date(d).toLocaleDateString("en-US", {
             month: "short",

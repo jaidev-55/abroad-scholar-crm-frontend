@@ -554,9 +554,12 @@ const AdminLayout = () => {
 
         <main className="flex-1 overflow-y-auto p-3 bg-gray-50">
           <Outlet />
-          <div className=" text-center text-gray-600 text-xs sm:text-sm">
-            © {new Date().getFullYear()} Abroad Scholars CRM. All Rights
-            Reserved.
+          <div className="text-center text-gray-600 text-xs sm:text-sm">
+            © {new Date().getFullYear()} Abroad Scholars CRM
+            <span className="mx-1">|</span>
+            All Rights Reserved
+            <span className="mx-1">|</span>
+            Built by Jai
           </div>
         </main>
       </div>

@@ -1,12 +1,21 @@
 import React from "react";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 import { HiOutlineRefresh, HiOutlineDownload } from "react-icons/hi";
 
 interface Props {
   onRefresh: () => void;
   onExport: () => void;
+  isRefreshing?: boolean;
+  isExporting?: boolean;
 }
 
-const DashboardHeader: React.FC<Props> = ({ onRefresh, onExport }) => (
+const DashboardHeader: React.FC<Props> = ({
+  onRefresh,
+  onExport,
+  isRefreshing = false,
+  isExporting = false,
+}) => (
   <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <div className="flex items-center gap-2">
@@ -20,18 +29,34 @@ const DashboardHeader: React.FC<Props> = ({ onRefresh, onExport }) => (
         Track performance, conversions and counselor activity
       </p>
     </div>
+
     <div className="flex flex-wrap items-center gap-2">
+      {/* Refresh */}
       <button
         onClick={onRefresh}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        disabled={isRefreshing}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <HiOutlineRefresh className="h-4 w-4" /> Refresh
+        {isRefreshing ? (
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} />
+        ) : (
+          <HiOutlineRefresh className="h-4 w-4" />
+        )}
+        {isRefreshing ? "Refreshing..." : "Refresh"}
       </button>
+
+      {/* Export PDF */}
       <button
         onClick={onExport}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        disabled={isExporting}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <HiOutlineDownload className="h-4 w-4" /> Export
+        {isExporting ? (
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} />
+        ) : (
+          <HiOutlineDownload className="h-4 w-4" />
+        )}
+        {isExporting ? "Exporting..." : "Export"}
       </button>
     </div>
   </div>
