@@ -174,7 +174,6 @@ const Dashboard = () => {
     }
   }, []);
 
-  // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <div id="dashboard-root" className="min-h-screen bg-slate-50/60 p-3">
       <DashboardHeader

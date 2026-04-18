@@ -6,12 +6,9 @@ import {
   RiSearchLine,
 } from "react-icons/ri";
 import { useState } from "react";
-
 import { useForm } from "react-hook-form";
-
 import CustomInput from "../../../components/common/CustomInput";
 import CustomSelect from "../../../components/common/CustomSelect";
-
 import CustomDatePicker from "../../../components/common/CustomDatePicker";
 import type { DateRangeValue } from "../../../types/lead";
 import {
@@ -20,10 +17,18 @@ import {
   SOURCES,
 } from "../../leadsPipeline/utils/constants";
 
+const STATUSES = [
+  { value: "NEW", label: "New" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "CONVERTED", label: "Converted" },
+  { value: "LOST", label: "Lost" },
+];
+
 interface CounselorUser {
   id: string;
   name: string;
 }
+
 interface FilterBarProps {
   filteredCount: number;
   totalCount: number;
@@ -37,6 +42,7 @@ interface FilterBarProps {
   onCounselorChange: (v: string) => void;
   onCountryChange: (v: string) => void;
   onPriorityChange: (v: string) => void;
+  onStatusChange: (v: string) => void;
   onDateRangeChange: (v: DateRangeValue) => void;
 }
 
@@ -53,9 +59,11 @@ const FilterBar: React.FC<FilterBarProps> = ({
   onCounselorChange,
   onCountryChange,
   onPriorityChange,
+  onStatusChange,
   onDateRangeChange,
 }) => {
   const [showFilters, setShowFilters] = useState(true);
+
   const {
     control,
     formState: { errors },
@@ -67,6 +75,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
       counselor: "",
       country: "",
       priority: "",
+      status: "",
       dateRange: null as DateRangeValue,
     },
   });
@@ -78,7 +87,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
 
   return (
     <div className="bg-white w-full rounded-2xl border border-slate-100 p-4">
-      {/* Header */}
+      {/* Header row */}
       <div
         className={`flex w-full justify-between items-center ${showFilters ? "mb-3.5" : ""}`}
       >
@@ -123,86 +132,114 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filter inputs — row 1 */}
       {showFilters && (
-        <div className="flex w-full gap-2 items-end">
-          <div className="flex-[1.8] min-w-0">
-            <CustomInput
-              name="search"
-              label="Search"
-              placeholder="Search by name or phone…"
-              control={control}
-              icon={<RiSearchLine size={14} className="text-slate-400" />}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                onSearchChange(e.target.value)
-              }
-            />
+        <>
+          <div className="flex w-full gap-2 items-end mb-2">
+            {/* Search */}
+            <div className="flex-[2] min-w-0">
+              <CustomInput
+                name="search"
+                label="Search"
+                placeholder="Search by name or phone…"
+                control={control}
+                icon={<RiSearchLine size={14} className="text-slate-400" />}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onSearchChange(e.target.value)
+                }
+              />
+            </div>
+
+            {/* Source */}
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="source"
+                label="Source"
+                placeholder="All Sources"
+                control={control}
+                errors={errors}
+                options={SOURCES.map((s) => ({ value: s, label: s }))}
+                onChange={(v: string) => onSourceChange(v ?? "")}
+              />
+            </div>
+
+            {/* Status */}
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="status"
+                label="Status"
+                placeholder="All Status"
+                control={control}
+                errors={errors}
+                options={STATUSES}
+                onChange={(v: string) => onStatusChange(v ?? "")}
+              />
+            </div>
+
+            {/* Counselor — sends ID to API */}
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="counselor"
+                label="Counselor"
+                placeholder="All Counselors"
+                control={control}
+                errors={errors}
+                options={counselorUsers.map((u) => ({
+                  value: u.id, // ← ID sent to API
+                  label: u.name, // ← name shown to user
+                }))}
+                onChange={(v: string) => onCounselorChange(v ?? "")}
+              />
+            </div>
+
+            {/* Country */}
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="country"
+                label="Country"
+                placeholder="All Countries"
+                control={control}
+                errors={errors}
+                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+                onChange={(v: string) => onCountryChange(v ?? "")}
+              />
+            </div>
+
+            {/* Priority */}
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="priority"
+                label="Priority"
+                placeholder="All Priorities"
+                control={control}
+                errors={errors}
+                options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+                onChange={(v: string) => onPriorityChange(v ?? "")}
+              />
+            </div>
+
+            {/* Date range */}
+            <div className="flex-[1.8] min-w-0">
+              <CustomDatePicker
+                mode="range"
+                name="dateRange"
+                label={
+                  dateFilterMode === "created"
+                    ? "Created Date"
+                    : "Follow-up Date"
+                }
+                placeholder={
+                  dateFilterMode === "created"
+                    ? ["Created from", "Created to"]
+                    : ["Follow-up from", "Follow-up to"]
+                }
+                control={control}
+                errors={errors}
+                onChange={(v) => onDateRangeChange(v ?? null)}
+              />
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <CustomSelect
-              name="source"
-              label="Source"
-              placeholder="Source"
-              control={control}
-              errors={errors}
-              options={SOURCES.map((s) => ({ value: s, label: s }))}
-              onChange={(v: string) => onSourceChange(v ?? "")}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <CustomSelect
-              name="counselor"
-              label="Counselor"
-              placeholder="Counselor"
-              control={control}
-              errors={errors}
-              options={counselorUsers.map((u) => ({
-                value: u.name,
-                label: u.name,
-              }))}
-              onChange={(v: string) => onCounselorChange(v ?? "")}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <CustomSelect
-              name="country"
-              label="Country"
-              placeholder="Country"
-              control={control}
-              errors={errors}
-              options={COUNTRIES.map((c) => ({ value: c, label: c }))}
-              onChange={(v: string) => onCountryChange(v ?? "")}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <CustomSelect
-              name="priority"
-              label="Priority"
-              placeholder="Priority"
-              control={control}
-              errors={errors}
-              options={PRIORITIES.map((p) => ({ value: p, label: p }))}
-              onChange={(v: string) => onPriorityChange(v ?? "")}
-            />
-          </div>
-          <div className="flex-[1.8] min-w-0">
-            <CustomDatePicker
-              mode="range"
-              name="dateRange"
-              label={
-                dateFilterMode === "created" ? "Created Date" : "Follow-up Date"
-              }
-              placeholder={
-                dateFilterMode === "created"
-                  ? ["Created from", "Created to"]
-                  : ["Follow-up from", "Follow-up to"]
-              }
-              control={control}
-              errors={errors}
-              onChange={(v) => onDateRangeChange(v ?? null)}
-            />
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

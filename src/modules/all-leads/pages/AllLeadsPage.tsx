@@ -81,10 +81,11 @@ const AllLeadsPage: React.FC = () => {
     ],
     queryFn: () =>
       getLeads({
-        source: sourceF ?? undefined,
-        country: countryF ?? undefined,
-        priority: priorityF ?? undefined,
-        status: statusF ?? undefined,
+        source: sourceF || undefined,
+        counselorId: counselorF || undefined,
+        country: countryF || undefined,
+        priority: priorityF || undefined,
+        status: statusF || undefined,
         startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         endDate: dateRange?.[1]
           ? dateRange[1].add(1, "day").format("YYYY-MM-DD")
@@ -283,6 +284,7 @@ const AllLeadsPage: React.FC = () => {
           totalCount={rawLeads.length}
           hasFilters={hasFilters}
           clearFilters={clearFilters}
+          onStatusChange={(v) => setStatusF(v as ApiLeadStatus | "")}
           counselorUsers={counselorUsers}
           onExport={() => setExportModalOpen(true)}
           onSearchChange={setSearch}

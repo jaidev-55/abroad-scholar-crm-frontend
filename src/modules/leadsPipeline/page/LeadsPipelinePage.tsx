@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { message, Spin } from "antd";
 import {
   PointerSensor,
@@ -33,7 +33,7 @@ import {
 import { getUsers } from "../../../api/auth";
 
 import { STAGES } from "../utils/constants";
-import { isTodayDate, todayString } from "../utils/dateUtils";
+import { todayString } from "../utils/dateUtils";
 import { apiLeadToLocal } from "../types/Transformlead";
 import CallModal from "../modals/call/CallModal";
 
@@ -116,17 +116,15 @@ const LeadsPipelinePage = () => {
   const stats = useMemo(() => {
     const today = todayString();
     return {
-      total: leads.length,
-      newToday: leads.filter((l) => l.createdAt === today).length,
-      followUpsDue: leads.filter((l) => l.followUp && l.followUp <= today)
-        .length,
-      converted: leads.filter(
-        (l) => l.stage === "converted" && isTodayDate(l.updatedAt),
+      total: filteredLeads.length,
+      newToday: filteredLeads.filter((l) => l.createdAt === today).length,
+      followUpsDue: filteredLeads.filter(
+        (l) => l.followUp && l.followUp <= today,
       ).length,
-      lost: leads.filter((l) => l.stage === "lost" && isTodayDate(l.updatedAt))
-        .length,
+      converted: filteredLeads.filter((l) => l.stage === "converted").length,
+      lost: filteredLeads.filter((l) => l.stage === "lost").length,
     };
-  }, [leads]);
+  }, [filteredLeads]);
 
   // ── Counselors for filter dropdown ────────────────────────────────────────
   const { data: counselorUsers = [] } = useQuery({

@@ -8,8 +8,6 @@ import type {
   PipelineResponse,
 } from "../api/dashboard";
 
-// ─── Leads Trend ─────────────────────────────────────────────────────────────
-
 interface LeadsTrendProps {
   option: LeadsTrendResponse | undefined;
   range: DateRange;
