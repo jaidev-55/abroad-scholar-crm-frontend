@@ -19,6 +19,7 @@ interface FilterValues {
 
 interface Props {
   range: DateRange;
+  isAdmin: boolean;
   onRangeChange: (r: DateRange) => void;
   onCounselorChange: (v: string) => void;
   onSourceChange: (v: string) => void;
@@ -27,6 +28,7 @@ interface Props {
 
 const DashboardFilters: React.FC<Props> = ({
   range,
+  isAdmin,
   onRangeChange,
   onCounselorChange,
   onSourceChange,
@@ -39,7 +41,6 @@ const DashboardFilters: React.FC<Props> = ({
     defaultValues: { counselor: "all", source: "all" },
   });
 
-  // Fetch real counselors from API
   const { data: counselors = [], isLoading: loadingCounselors } = useQuery({
     queryKey: ["users", "COUNSELOR"],
     queryFn: () => getUsers("COUNSELOR"),
@@ -54,10 +55,9 @@ const DashboardFilters: React.FC<Props> = ({
   return (
     <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between flex-wrap">
-        {/* Date range pills + RangePicker */}
+        {/* Date range pills */}
         <div className="flex items-center gap-2 flex-wrap">
           <HiOutlineCalendar className="h-4 w-4 text-slate-400 shrink-0" />
-
           <div className="flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1">
             {DATE_RANGES.map((r) => (
               <button
@@ -93,7 +93,7 @@ const DashboardFilters: React.FC<Props> = ({
             <HiOutlineFilter className="h-4 w-4" /> Filters:
           </div>
 
-          {/* Counselor dropdown — real data from /auth/users?role=COUNSELOR */}
+          {/* Counselor dropdown */}
           <div className="w-40">
             <CustomSelect
               name="counselor"
@@ -110,32 +110,34 @@ const DashboardFilters: React.FC<Props> = ({
             />
           </div>
 
-          {/* Source dropdown */}
-          <div className="w-36">
-            <CustomSelect
-              name="source"
-              label=""
-              placeholder="All Sources"
-              control={
-                control as unknown as import("react-hook-form").Control<FieldValues>
-              }
-              errors={
-                errors as unknown as import("react-hook-form").FieldErrors<FieldValues>
-              }
-              options={[
-                { value: "all", label: "All Sources" },
-                { value: "INSTAGRAM", label: "Instagram" },
-                { value: "FACEBOOK", label: "Facebook" },
-                { value: "WEBSITE", label: "Website" },
-                { value: "REFERRAL", label: "Referral" },
-                { value: "WALK_IN", label: "Walk In" },
-                { value: "GOOGLE_ADS", label: "Google Ads" },
-                { value: "META_ADS", label: "Meta Ads" },
-                { value: "GOOGLE_SHEET", label: "Google Sheet" },
-              ]}
-              onChange={(v) => onSourceChange(v ?? "all")}
-            />
-          </div>
+          {/* Source dropdown — ADMIN only */}
+          {isAdmin && (
+            <div className="w-36">
+              <CustomSelect
+                name="source"
+                label=""
+                placeholder="All Sources"
+                control={
+                  control as unknown as import("react-hook-form").Control<FieldValues>
+                }
+                errors={
+                  errors as unknown as import("react-hook-form").FieldErrors<FieldValues>
+                }
+                options={[
+                  { value: "all", label: "All Sources" },
+                  { value: "INSTAGRAM", label: "Instagram" },
+                  { value: "FACEBOOK", label: "Facebook" },
+                  { value: "WEBSITE", label: "Website" },
+                  { value: "REFERRAL", label: "Referral" },
+                  { value: "WALK_IN", label: "Walk In" },
+                  { value: "GOOGLE_ADS", label: "Google Ads" },
+                  { value: "META_ADS", label: "Meta Ads" },
+                  { value: "GOOGLE_SHEET", label: "Google Sheet" },
+                ]}
+                onChange={(v) => onSourceChange(v ?? "all")}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

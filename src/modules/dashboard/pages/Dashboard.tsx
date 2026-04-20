@@ -25,6 +25,7 @@ import {
 } from "../api/dashboard";
 import type { LeadSource } from "../types/dashboard";
 import { exportDashboardPDF } from "../types/Exporttopdf";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 export interface DashboardFilterState {
   range: DateRange;
@@ -64,6 +65,9 @@ const Dashboard = () => {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Read role from localStorage — set at login, no extra API call needed
+  const isAdmin = getIsAdmin();
 
   const [filters, setFilters] = useState<DashboardFilterState>({
     range: "30d",
@@ -114,7 +118,7 @@ const Dashboard = () => {
   const sourcesQuery = useQuery({
     queryKey: ["dashboard", "sources", ...baseKey],
     queryFn: () => getLeadSources(queryParams),
-    enabled: isCustomReady,
+    enabled: isCustomReady && isAdmin, // don't fetch if not needed
     staleTime: 60_000,
   });
 
@@ -139,7 +143,7 @@ const Dashboard = () => {
     staleTime: 60_000,
   });
 
-  // ─── Refresh ────────────────────────────────────────────────────────────
+  // ─── Refresh ──────────────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -154,7 +158,7 @@ const Dashboard = () => {
     }
   }, [queryClient]);
 
-  // ─── Export PDF (visual snapshot of the whole dashboard) ────────────────
+  // ─── Export PDF ───────────────────────────────────────────────────────────
   const handleExportPDF = useCallback(async () => {
     setIsExporting(true);
     try {
@@ -183,8 +187,10 @@ const Dashboard = () => {
         isExporting={isExporting}
       />
 
+      {/* Filters — source dropdown hidden for counselors */}
       <DashboardFilters
         range={filters.range}
+        isAdmin={isAdmin}
         onRangeChange={(r) =>
           setFilters((p) => ({
             ...p,
@@ -200,6 +206,7 @@ const Dashboard = () => {
         }
       />
 
+      {/* Stats */}
       {statsQuery.isLoading ? (
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -215,6 +222,7 @@ const Dashboard = () => {
         <StatsGrid stats={statsQuery.data?.stats ?? null} />
       )}
 
+      {/* Trend chart */}
       <div className="mb-6 grid grid-cols-1 gap-4">
         {trendQuery.isLoading ? (
           <SectionSkeleton height={320} />
@@ -223,12 +231,15 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {sourcesQuery.isLoading ? (
-          <SectionSkeleton />
-        ) : (
-          <SourceBreakdownChart option={sourcesQuery.data} />
-        )}
+      <div
+        className={`mb-6 grid grid-cols-1 gap-4 ${isAdmin ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+      >
+        {isAdmin &&
+          (sourcesQuery.isLoading ? (
+            <SectionSkeleton />
+          ) : (
+            <SourceBreakdownChart option={sourcesQuery.data} />
+          ))}
         {pipelineQuery.isLoading ? (
           <SectionSkeleton />
         ) : (
@@ -243,10 +254,14 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Recent leads — source column hidden for counselors */}
       {recentLeadsQuery.isLoading ? (
         <SectionSkeleton height={360} />
       ) : (
-        <RecentLeadsTable leads={recentLeadsQuery.data?.data ?? []} />
+        <RecentLeadsTable
+          leads={recentLeadsQuery.data?.data ?? []}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );

@@ -34,6 +34,7 @@ interface FilterBarProps {
   totalCount: number;
   dateFilterMode?: "followup" | "created";
   clearFilters: () => void;
+  isAdmin?: boolean;
   counselorUsers: CounselorUser[];
   hasFilters: boolean;
   onExport: () => void;
@@ -52,6 +53,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   totalCount,
   clearFilters,
   hasFilters,
+  isAdmin = false,
   onExport,
   counselorUsers,
   onSearchChange,
@@ -151,17 +153,19 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </div>
 
             {/* Source */}
-            <div className="flex-1 min-w-0">
-              <CustomSelect
-                name="source"
-                label="Source"
-                placeholder="All Sources"
-                control={control}
-                errors={errors}
-                options={SOURCES.map((s) => ({ value: s, label: s }))}
-                onChange={(v: string) => onSourceChange(v ?? "")}
-              />
-            </div>
+            {isAdmin && (
+              <div className="flex-1 min-w-0">
+                <CustomSelect
+                  name="source"
+                  label="Source"
+                  placeholder="All Sources"
+                  control={control}
+                  errors={errors}
+                  options={SOURCES.map((s) => ({ value: s, label: s }))}
+                  onChange={(v: string) => onSourceChange(v ?? "")}
+                />
+              </div>
+            )}
 
             {/* Status */}
             <div className="flex-1 min-w-0">
@@ -185,8 +189,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 control={control}
                 errors={errors}
                 options={counselorUsers.map((u) => ({
-                  value: u.id, // ← ID sent to API
-                  label: u.name, // ← name shown to user
+                  value: u.id,
+                  label: u.name,
                 }))}
                 onChange={(v: string) => onCounselorChange(v ?? "")}
               />

@@ -18,7 +18,6 @@ import type {
   LeadPriority,
   LeadStatus as ApiLeadStatus,
 } from "../../../modules/leadsPipeline/api/leads";
-
 import { PRIORITY_ORDER } from "../utils/constants";
 import { Avatar, PriBadge, SrcBadge, StatusBadge } from "./Allleadsatoms";
 
@@ -26,6 +25,7 @@ interface Props {
   data: ApiLead[];
   isLoading: boolean;
   isError: boolean;
+  isAdmin: boolean;
   today: string;
   hasFilters: boolean;
   selected: string[];
@@ -41,6 +41,7 @@ const AllLeadsTable: React.FC<Props> = ({
   isLoading,
   isError,
   today,
+  isAdmin,
   hasFilters,
   selected,
   onSelectChange,
@@ -49,7 +50,7 @@ const AllLeadsTable: React.FC<Props> = ({
   onClearFilters,
   onRefetch,
 }) => {
-  const columns: TableColumnsType<ApiLead> = [
+  const baseColumns: TableColumnsType<ApiLead> = [
     {
       title: (
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -91,6 +92,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       key: "contact",
       width: 150,
+      align: "center",
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex flex-col gap-0.5">
           <a
@@ -220,7 +222,13 @@ const AllLeadsTable: React.FC<Props> = ({
         const isToday = d === today;
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${overdue ? "bg-red-50 text-red-600 border-red-200" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${
+              overdue
+                ? "bg-red-50 text-red-600 border-red-200"
+                : isToday
+                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200"
+            }`}
           >
             <RiCalendarLine size={10} />
             {new Date(date).toLocaleDateString("en-US", {
@@ -245,7 +253,11 @@ const AllLeadsTable: React.FC<Props> = ({
         const n = rec.notes?.length ?? 0;
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${n > 0 ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-slate-50 text-slate-400 border-slate-200"}`}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${
+              n > 0
+                ? "bg-blue-50 text-blue-600 border-blue-200"
+                : "bg-slate-50 text-slate-400 border-slate-200"
+            }`}
           >
             <RiStickyNoteLine size={11} />
             {n}
@@ -265,7 +277,7 @@ const AllLeadsTable: React.FC<Props> = ({
       width: 95,
       sorter: (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      render: (d: string) => (   
+      render: (d: string) => (
         <span className="text-[11px] text-slate-400">
           {new Date(d).toLocaleDateString("en-US", {
             month: "short",
@@ -275,34 +287,41 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
     },
-    {
-      title: (
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Action
-        </span>
-      ),
-      key: "action",
-      width: 60,
-      align: "center",
-      fixed: "right",
-      render: (_: unknown, rec: ApiLead) => (
-        <Tooltip title="Delete lead" placement="left">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteClick(rec.id, rec.fullName, e);
-            }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all duration-150 group"
-          >
-            <RiDeleteBinLine
-              size={14}
-              className="group-hover:scale-110 transition-transform"
-            />
-          </button>
-        </Tooltip>
-      ),
-    },
   ];
+
+  // Action column only for ADMIN — use spread+ternary, NOT {isAdmin && obj} inside array
+  const columns: TableColumnsType<ApiLead> = isAdmin
+    ? [
+        ...baseColumns,
+        {
+          title: (
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Action
+            </span>
+          ),
+          key: "action",
+          width: 60,
+          align: "center" as const,
+          fixed: "right" as const,
+          render: (_: unknown, rec: ApiLead) => (
+            <Tooltip title="Delete lead" placement="left">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteClick(rec.id, rec.fullName, e);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all duration-150 group"
+              >
+                <RiDeleteBinLine
+                  size={14}
+                  className="group-hover:scale-110 transition-transform"
+                />
+              </button>
+            </Tooltip>
+          ),
+        },
+      ]
+    : baseColumns;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden relative">
@@ -343,7 +362,9 @@ const AllLeadsTable: React.FC<Props> = ({
           }}
           onRow={(rec) => ({
             onClick: () => onRowClick(rec),
-            className: `cursor-pointer transition-colors ${rec.status === "LOST" ? "opacity-60" : ""}`,
+            className: `cursor-pointer transition-colors ${
+              rec.status === "LOST" ? "opacity-60" : ""
+            }`,
           })}
           pagination={{
             pageSize: 15,

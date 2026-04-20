@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { HiOutlineChevronDown, HiOutlineLightningBolt } from "react-icons/hi";
+import { HiOutlineLightningBolt } from "react-icons/hi";
 import type { DateRange } from "../utils/constants";
 import { useEChart } from "../utils/Useechart";
 import type {
@@ -123,7 +123,7 @@ export const LeadsTrendChart: React.FC<LeadsTrendProps> = ({
           </p>
         </div>
         <button className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
-          {rangeLabel[range]} <HiOutlineChevronDown className="h-3 w-3" />
+          {rangeLabel[range]}
         </button>
       </div>
       <div ref={ref} style={{ height: 280, width: "100%" }} />

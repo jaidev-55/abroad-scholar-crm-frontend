@@ -21,6 +21,7 @@ interface CounselorUser {
 interface FilterBarProps {
   filteredCount: number;
   totalCount: number;
+  isAdmin?: boolean;
   clearFilters: () => void;
   counselorUsers: CounselorUser[];
   hasFilters: boolean;
@@ -36,6 +37,7 @@ interface FilterBarProps {
 const FilterBar: React.FC<FilterBarProps> = ({
   filteredCount,
   totalCount,
+  isAdmin = false,
   clearFilters,
   hasFilters,
   onExport,
@@ -130,17 +132,22 @@ const FilterBar: React.FC<FilterBarProps> = ({
               }
             />
           </div>
-          <div className="flex-1 min-w-0">
-            <CustomSelect
-              name="source"
-              label="Source"
-              placeholder="Source"
-              control={control}
-              errors={errors}
-              options={SOURCES.map((s) => ({ value: s, label: s }))}
-              onChange={(v: string) => onSourceChange(v ?? "")}
-            />
-          </div>
+
+          {/* Source — ADMIN only */}
+          {isAdmin && (
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="source"
+                label="Source"
+                placeholder="Source"
+                control={control}
+                errors={errors}
+                options={SOURCES.map((s) => ({ value: s, label: s }))}
+                onChange={(v: string) => onSourceChange(v ?? "")}
+              />
+            </div>
+          )}
+
           <div className="flex-1 min-w-0">
             <CustomSelect
               name="counselor"

@@ -31,13 +31,12 @@ import {
   type LeadStatus,
 } from "../api/leads";
 import { getUsers } from "../../../api/auth";
-
 import { STAGES } from "../utils/constants";
 import { todayString } from "../utils/dateUtils";
 import { apiLeadToLocal } from "../types/Transformlead";
 import CallModal from "../modals/call/CallModal";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
-// ─── Stage → API status map ───────────────────────────────────────────────────
 const STAGE_TO_STATUS: Record<string, LeadStatus> = {
   new: "NEW",
   progress: "IN_PROGRESS",
@@ -68,14 +67,12 @@ const LeadsPipelinePage = () => {
   const [viewDrawerInitialTab, setViewDrawerInitialTab] = useState<
     "notes" | "details" | "activity"
   >("notes");
-
-  // ── DnD state ─────────────────────────────────────────────────────────────
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStageId, setOverStageId] = useState<string | null>(null);
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
+  const isAdmin = getIsAdmin();
 
   const queryKey = [
     "leads",
@@ -126,14 +123,14 @@ const LeadsPipelinePage = () => {
     };
   }, [filteredLeads]);
 
-  // ── Counselors for filter dropdown ────────────────────────────────────────
+  //  Counselors for filter dropdown
   const { data: counselorUsers = [] } = useQuery({
     queryKey: ["counselors"],
     queryFn: () => getUsers("COUNSELOR"),
     staleTime: 5 * 60 * 1000,
   });
 
-  // ── Mutation: move lead ───────────────────────────────────────────────────
+  // Mutation: move lead
   const { mutate: moveLeadMutation } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) =>
       updateLead(id, { status }),
@@ -148,7 +145,7 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  // ── Mutation: mark as lost ────────────────────────────────────────────────
+  //  Mutation: mark as lost
   const { mutate: markLostMutation } = useMutation({
     mutationFn: ({
       id,
@@ -175,7 +172,7 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  // ── Mutation: add note ────────────────────────────────────────────────────
+  //  Mutation: add note
   const { mutate: addNoteMutation } = useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) =>
       updateLead(id, { notes: [{ content: text }] }),
@@ -187,7 +184,7 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  // ── DnD handlers ──────────────────────────────────────────────────────────
+  // ── DnD handlers
   const handleDragStart = (e: DragStartEvent) => {
     setActiveId(e.active.id as string);
   };
@@ -241,7 +238,7 @@ const LeadsPipelinePage = () => {
     moveLeadMutation({ id: active.id as string, status: newStatus });
   };
 
-  // ── Auto-open lead from email deep-link ───────────────────────────────────
+  // ── Auto-open lead from email deep-links
   const autoOpenDone = useRef(false);
 
   useEffect(() => {
@@ -344,6 +341,7 @@ const LeadsPipelinePage = () => {
         <FilterBar
           filteredCount={filteredLeads.length}
           totalCount={leads.length}
+          isAdmin={isAdmin}
           clearFilters={clearFilters}
           hasFilters={hasFilters}
           counselorUsers={counselorUsers}

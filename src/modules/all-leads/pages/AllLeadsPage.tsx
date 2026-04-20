@@ -22,7 +22,6 @@ import {
   type LeadStatus as ApiLeadStatus,
   type LeadPriority,
 } from "../../leadsPipeline/api/leads";
-import { getUsers } from "../../../api/auth";
 import { StatCard } from "../components/Allleadsatoms";
 import { apiLeadToLocal } from "../utils/Allleadshelpers";
 import AllLeadsTable from "../components/Allleadstable";
@@ -31,6 +30,8 @@ import DeleteConfirmModal from "../components/Deleteconfirmmodal";
 import DetailDrawer from "../components/Detaildrawer";
 import type { DateRangeValue } from "../../leadsPipeline/types/lead";
 import FilterBar from "../components/FilterBar";
+import { getUsers } from "../../../api/auth";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 type BulkModalType = "assign" | null;
 
@@ -61,6 +62,7 @@ const AllLeadsPage: React.FC = () => {
   }>({ open: false, mode: "single" });
 
   const today = new Date().toISOString().split("T")[0];
+  const isAdmin = getIsAdmin();
 
   // ── Data fetching ─────────────────────────────────────────────────────────
   const {
@@ -283,6 +285,7 @@ const AllLeadsPage: React.FC = () => {
           dateFilterMode="created"
           totalCount={rawLeads.length}
           hasFilters={hasFilters}
+          isAdmin={isAdmin}
           clearFilters={clearFilters}
           onStatusChange={(v) => setStatusF(v as ApiLeadStatus | "")}
           counselorUsers={counselorUsers}
@@ -331,6 +334,7 @@ const AllLeadsPage: React.FC = () => {
           isLoading={isLoading}
           isError={isError}
           today={today}
+          isAdmin={isAdmin}
           hasFilters={hasFilters}
           selected={selected}
           onSelectChange={setSelected}

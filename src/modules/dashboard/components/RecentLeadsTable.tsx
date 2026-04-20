@@ -9,8 +9,8 @@ import {
   type LeadStatus,
 } from "../utils/constants";
 import type { LeadPriority } from "../../leadsPipeline/types/lead";
-
-// ─── Derived display helpers (replaces old mock fields) ───────────────────────
+import { useNavigate } from "react-router-dom";
+import { RiArrowRightLine } from "react-icons/ri";
 
 const AVATAR_COLORS = [
   { bg: "bg-blue-100", text: "text-blue-700" },
@@ -28,7 +28,7 @@ const SOURCE_COLORS: Record<string, string> = {
   WALK_IN: "bg-purple-50 text-purple-600",
   GOOGLE_ADS: "bg-red-50 text-red-600",
   META_ADS: "bg-cyan-50 text-cyan-600",
-  GOOGLE_SHEET: "bg-slate-100 text-slate-600",
+  GOOGLE_SHEET: "bg-green-50 text-green-700",
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -42,7 +42,6 @@ const SOURCE_LABEL: Record<string, string> = {
   GOOGLE_SHEET: "Google Sheet",
 };
 
-// Enrich each lead with display-only fields so columns stay unchanged
 type EnrichedLead = RecentLeadItem & {
   _avatarBg: string;
   _avatarText: string;
@@ -63,131 +62,157 @@ const enrich = (lead: RecentLeadItem, index: number): EnrichedLead => {
   };
 };
 
-// ─── Columns (UI identical to original) ──────────────────────────────────────
+// ─── Column definitions ───────────────────────────────────────────────────────
 
-const columns: ColumnsType<EnrichedLead> = [
-  {
-    title: "Student",
-    key: "name",
-    render: (_, l) => (
-      <div className="flex items-center gap-2.5">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${l._avatarBg} text-xs font-bold ${l._avatarText}`}
-        >
-          {l.initials}
-        </div>
-        <div>
-          <div className="font-semibold text-slate-800">{l.fullName}</div>
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <HiOutlineGlobeAlt className="h-3 w-3" />
-            {l.country ?? "—"}
-          </div>
+const studentColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Student",
+  key: "name",
+  render: (_, l) => (
+    <div className="flex items-center gap-2.5">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${l._avatarBg} text-xs font-bold ${l._avatarText}`}
+      >
+        {l.initials}
+      </div>
+      <div>
+        <div className="font-semibold text-slate-800">{l.fullName}</div>
+        <div className="flex items-center gap-1 text-xs text-slate-400">
+          <HiOutlineGlobeAlt className="h-3 w-3" />
+          {l.country ?? "—"}
         </div>
       </div>
-    ),
-  },
-  {
-    title: "Source",
-    dataIndex: "source",
-    key: "source",
-    filters: Object.entries(SOURCE_LABEL).map(([v, t]) => ({
-      text: t,
-      value: v,
-    })),
-    onFilter: (value, r) => r.source === value,
-    render: (_, l) => (
-      <span
-        className={`rounded-md px-2 py-1 text-xs font-semibold ${l._sourceColor}`}
-      >
-        {l._sourceLabel}
-      </span>
-    ),
-  },
-  {
-    title: "Counselor",
-    key: "counselor",
-    render: (_, l) => (
-      <div className="flex items-center gap-1 text-xs text-slate-600">
-        <HiOutlineUserGroup className="h-3.5 w-3.5 text-slate-400" />{" "}
-        {l._counselorName}
-      </div>
-    ),
-  },
-  {
-    title: "IELTS",
-    dataIndex: "ieltsScore",
-    key: "ieltsScore",
-    sorter: (a, b) => (a.ieltsScore ?? 0) - (b.ieltsScore ?? 0),
-    render: (v: number | null) => (
-      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
-        {v ?? "—"}
-      </span>
-    ),
-  },
-  {
-    title: "Priority",
-    dataIndex: "priority",
-    key: "priority",
-    filters: [
-      { text: "🔥 Hot", value: "HOT" },
-      { text: "Warm", value: "WARM" },
-      { text: "Cold", value: "COLD" },
-    ],
-    onFilter: (value, r) => r.priority === value,
-    render: (v: string) => (
-      <span
-        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityBadge(v as LeadPriority)}`}
-      >
-        {v === "HOT" ? "🔥 " : ""}
-        {v.charAt(0) + v.slice(1).toLowerCase()}
-      </span>
-    ),
-  },
-  {
-    title: "Status",
-    dataIndex: "status",
-    key: "status",
-    filters: [
-      { text: "New", value: "NEW" },
-      { text: "In Progress", value: "IN_PROGRESS" },
-      { text: "Converted", value: "CONVERTED" },
-      { text: "Lost", value: "LOST" },
-    ],
-    onFilter: (value, r) => r.status === value,
-    render: (v: string) => (
-      <span
-        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadge(v as LeadStatus)}`}
-      >
-        {v === "IN_PROGRESS"
-          ? "In Progress"
-          : v.charAt(0) + v.slice(1).toLowerCase()}
-      </span>
-    ),
-  },
-  {
-    title: "Created",
-    dataIndex: "createdAt",
-    key: "createdAt",
-    render: (v: string) => (
-      <span className="text-xs text-slate-500">
-        {new Date(v).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })}
-      </span>
-    ),
-  },
-];
+    </div>
+  ),
+};
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Source column — ADMIN only
+const sourceColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Source",
+  dataIndex: "source",
+  key: "source",
+  align: "center",
+  filters: Object.entries(SOURCE_LABEL).map(([v, t]) => ({
+    text: t,
+    value: v,
+  })),
+  onFilter: (value, r) => r.source === value,
+  render: (_, l) => (
+    <span
+      className={`rounded-md px-2 py-1 text-xs font-semibold ${l._sourceColor}`}
+    >
+      {l._sourceLabel}
+    </span>
+  ),
+};
+
+const counselorColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Counselor",
+  key: "counselor",
+  render: (_, l) => (
+    <div className="flex items-center gap-1 text-xs text-slate-600">
+      <HiOutlineUserGroup className="h-3.5 w-3.5 text-slate-400" />{" "}
+      {l._counselorName}
+    </div>
+  ),
+};
+
+const ieltsColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "IELTS",
+  dataIndex: "ieltsScore",
+  key: "ieltsScore",
+  sorter: (a, b) => (a.ieltsScore ?? 0) - (b.ieltsScore ?? 0),
+  render: (v: number | null) => (
+    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
+      {v ?? "—"}
+    </span>
+  ),
+};
+
+const priorityColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Priority",
+  dataIndex: "priority",
+  key: "priority",
+  filters: [
+    { text: "🔥 Hot", value: "HOT" },
+    { text: "Warm", value: "WARM" },
+    { text: "Cold", value: "COLD" },
+  ],
+  onFilter: (value, r) => r.priority === value,
+  render: (v: string) => (
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${priorityBadge(v as LeadPriority)}`}
+    >
+      {v === "HOT" ? "🔥 " : ""}
+      {v.charAt(0) + v.slice(1).toLowerCase()}
+    </span>
+  ),
+};
+
+const statusColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Status",
+  dataIndex: "status",
+  key: "status",
+  filters: [
+    { text: "New", value: "NEW" },
+    { text: "In Progress", value: "IN_PROGRESS" },
+    { text: "Converted", value: "CONVERTED" },
+    { text: "Lost", value: "LOST" },
+  ],
+  onFilter: (value, r) => r.status === value,
+  render: (v: string) => (
+    <span
+      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadge(v as LeadStatus)}`}
+    >
+      {v === "IN_PROGRESS"
+        ? "In Progress"
+        : v.charAt(0) + v.slice(1).toLowerCase()}
+    </span>
+  ),
+};
+
+const createdColumn: ColumnsType<EnrichedLead>[number] = {
+  title: "Created",
+  dataIndex: "createdAt",
+  key: "createdAt",
+  render: (v: string) => (
+    <span className="text-xs text-slate-500">
+      {new Date(v).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })}
+    </span>
+  ),
+};
 
 interface Props {
   leads: RecentLeadItem[];
+  isAdmin: boolean;
 }
 
-const RecentLeadsTable: React.FC<Props> = ({ leads }) => {
+const RecentLeadsTable: React.FC<Props> = ({ leads, isAdmin }) => {
   const enriched = leads.map(enrich);
+  const navigate = useNavigate();
+
+  const columns: ColumnsType<EnrichedLead> = isAdmin
+    ? [
+        studentColumn,
+        sourceColumn,
+        counselorColumn,
+        ieltsColumn,
+        priorityColumn,
+        statusColumn,
+        createdColumn,
+      ]
+    : [
+        studentColumn,
+        counselorColumn,
+        ieltsColumn,
+        priorityColumn,
+        statusColumn,
+        createdColumn,
+      ];
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
@@ -199,8 +224,11 @@ const RecentLeadsTable: React.FC<Props> = ({ leads }) => {
             leads
           </p>
         </div>
-        <button className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-          View all →
+        <button
+          onClick={() => navigate("/admin/all-leads")}
+          className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          View all <RiArrowRightLine size={13} />
         </button>
       </div>
       <Table
