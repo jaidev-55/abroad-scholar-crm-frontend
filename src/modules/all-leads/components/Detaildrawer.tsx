@@ -131,6 +131,14 @@ const DetailDrawer: React.FC<Props> = ({ lead, today, onClose, onDelete }) => {
                     value: lead.source ? formatSourceLabel(lead.source) : "—",
                   },
                   {
+                    label: "Category",
+                    value: lead.category
+                      ? lead.category === "ACADEMIC"
+                        ? "Academic"
+                        : "Admission"
+                      : "—",
+                  },
+                  {
                     label: "Counselor",
                     value: lead.counselor?.name ?? "Unassigned",
                   },

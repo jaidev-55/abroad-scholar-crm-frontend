@@ -19,6 +19,8 @@ import {
   RiPhoneFill,
   RiMailFill,
   RiArrowRightLine,
+  RiBookOpenLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 
 import type { Lead } from "../types/lead";
@@ -386,6 +388,24 @@ const ViewLeadDrawer: React.FC<Props> = ({
                   icon={<RiAwardLine size={14} />}
                   label="IELTS Score"
                   value={`Band ${displayLead.ieltsScore}`}
+                />
+              )}
+
+              {displayLead.category && (
+                <DetailRow
+                  icon={
+                    displayLead.category === "ACADEMIC" ? (
+                      <RiBookOpenLine size={14} />
+                    ) : (
+                      <RiBuilding2Line size={14} />
+                    )
+                  }
+                  label="Category"
+                  value={
+                    displayLead.category === "ACADEMIC"
+                      ? "Academic"
+                      : "Admission"
+                  }
                 />
               )}
             </div>

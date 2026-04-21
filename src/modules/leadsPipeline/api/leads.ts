@@ -3,6 +3,7 @@ import axiosInstance from "../../../utils/axiosInstance";
 // ─── Shared enums ────────────────────────────────────
 export type LeadStatus = "NEW" | "IN_PROGRESS" | "CONVERTED" | "LOST";
 export type LeadPriority = "HOT" | "WARM" | "COLD";
+export type LeadCategory = "ACADEMIC" | "ADMISSION";
 
 // ─── Create ──────────────────────────────────────────
 export interface CreateLeadPayload {
@@ -18,6 +19,7 @@ export interface CreateLeadPayload {
   ieltsScore?: number;
   followUpDate?: string;
   notes?: string[];
+  category?: LeadCategory;
 }
 
 export interface CreateLeadResponse {
@@ -32,6 +34,7 @@ export interface CreateLeadResponse {
   ieltsScore?: number;
   followUpDate?: string;
   createdAt: string;
+  category?: LeadCategory | null; // ← new
 }
 
 export const createLead = async (
@@ -54,6 +57,7 @@ export interface UpdateLeadPayload {
   followUpDate?: string;
   lostReason?: string;
   notes?: Array<{ id?: string; content: string }>;
+  category?: LeadCategory | null; // ← new
 }
 
 export const updateLead = async (
@@ -77,6 +81,7 @@ export interface GetLeadsParams {
   endDate?: string;
   page?: number;
   limit?: number;
+  category?: LeadCategory; // ← new
 }
 
 export interface ApiNote {
@@ -108,6 +113,7 @@ export interface ApiLead {
   notes?: ApiNote[];
   createdAt: string;
   updatedAt: string;
+  category?: LeadCategory | null; // ← new
 }
 
 export const getLeads = async (params?: GetLeadsParams): Promise<ApiLead[]> =>

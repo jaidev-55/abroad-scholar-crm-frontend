@@ -6,7 +6,6 @@ import {
   RiSearchLine,
 } from "react-icons/ri";
 import { useState } from "react";
-
 import { useForm } from "react-hook-form";
 import type { DateRangeValue } from "../types/lead";
 import CustomInput from "../../../components/common/CustomInput";
@@ -32,6 +31,7 @@ interface FilterBarProps {
   onCountryChange: (v: string) => void;
   onPriorityChange: (v: string) => void;
   onDateRangeChange: (v: DateRangeValue) => void;
+  onCategoryChange: (v: string) => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
@@ -39,6 +39,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   totalCount,
   isAdmin = false,
   clearFilters,
+  onCategoryChange,
   hasFilters,
   onExport,
   counselorUsers,
@@ -61,6 +62,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
       counselor: "",
       country: "",
       priority: "",
+      category: "",
       dateRange: null as DateRangeValue,
     },
   });
@@ -147,7 +149,20 @@ const FilterBar: React.FC<FilterBarProps> = ({
               />
             </div>
           )}
-
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="category"
+              label="Category"
+              placeholder="All Categories"
+              control={control}
+              errors={errors}
+              options={[
+                { value: "ACADEMIC", label: "🎓 Academic" },
+                { value: "ADMISSION", label: "🏫 Admission" },
+              ]}
+              onChange={(v: string) => onCategoryChange(v ?? "")}
+            />
+          </div>
           <div className="flex-1 min-w-0">
             <CustomSelect
               name="counselor"

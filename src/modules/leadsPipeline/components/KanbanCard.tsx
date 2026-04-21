@@ -2,6 +2,8 @@ import { Tooltip, type MenuProps, Dropdown as AntDropdown } from "antd";
 
 import {
   RiArrowRightLine,
+  RiBookOpenLine,
+  RiBuilding2Line,
   RiCalendarLine,
   RiCloseCircleLine,
   RiDragMove2Line,
@@ -21,6 +23,36 @@ import { STAGES } from "../utils/constants";
 import UserAvatar from "../../../components/common/UserAvatar";
 import SourceBadge from "../../../components/common/badges/SourceBadge";
 import PriorityBadge from "../../../components/common/badges/PriorityBadge";
+
+// Category badge
+const CATEGORY_CONFIG = {
+  ACADEMIC: {
+    icon: RiBookOpenLine,
+    label: "Academic",
+    cls: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  ADMISSION: {
+    icon: RiBuilding2Line,
+    label: "Admission",
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+} as const;
+
+const CategoryBadge: React.FC<{ category?: string | null }> = ({
+  category,
+}) => {
+  if (!category) return null;
+  const cfg = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+    >
+      <Icon size={10} /> {cfg.label}
+    </span>
+  );
+};
 
 const KanbanCard: React.FC<{
   lead: Lead;
@@ -60,6 +92,7 @@ const KanbanCard: React.FC<{
       : lead.priority === "Warm"
         ? "bg-amber-500"
         : "bg-blue-500";
+
   const menuItems: MenuProps["items"] = [
     {
       key: "notes",
@@ -89,6 +122,7 @@ const KanbanCard: React.FC<{
       danger: true,
     },
   ];
+
   const handleMenuClick: MenuProps["onClick"] = ({ key, domEvent }) => {
     domEvent.stopPropagation();
     if (key === "notes") onViewNotes(lead);
@@ -99,11 +133,16 @@ const KanbanCard: React.FC<{
     if (key === "move" && nextStage) onMoveTo(lead.id, nextStage.id);
     if (key === "lost") onMarkLost(lead);
   };
+
   return (
     <div
       ref={setNodeRef}
       onClick={() => onView(lead)}
-      className={`relative rounded-2xl p-4 transition-all duration-200 ${isDragging ? "bg-blue-50 border-2 border-dashed border-blue-400 shadow-xl" : "bg-white border border-slate-100 shadow-sm hover:shadow-md hover:shadow-blue-100/40 hover:border-blue-200"}`}
+      className={`relative rounded-2xl p-4 transition-all duration-200 ${
+        isDragging
+          ? "bg-blue-50 border-2 border-dashed border-blue-400 shadow-xl"
+          : "bg-white border border-slate-100 shadow-sm hover:shadow-md hover:shadow-blue-100/40 hover:border-blue-200"
+      }`}
     >
       <div
         className={`absolute top-0 left-4 right-4 h-[3px] rounded-b ${priorityBarColor}`}
@@ -115,6 +154,8 @@ const KanbanCard: React.FC<{
       >
         <RiDragMove2Line size={12} />
       </div>
+
+      {/* Header */}
       <div className="flex justify-between items-start mb-3 mt-1.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <UserAvatar name={lead.name} />
@@ -158,10 +199,15 @@ const KanbanCard: React.FC<{
           </AntDropdown>
         </div>
       </div>
+
+      {/* Badges — source + priority + category */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         <SourceBadge source={lead.source} />
         <PriorityBadge priority={lead.priority} />
+        <CategoryBadge category={lead.category} />
       </div>
+
+      {/* Info rows */}
       <div className="flex flex-col gap-1.5 mb-3">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <RiGlobalLine size={12} className="text-slate-400 shrink-0" />
@@ -172,8 +218,16 @@ const KanbanCard: React.FC<{
           <span className="truncate">{lead.counselor}</span>
         </div>
       </div>
+
+      {/* Follow-up */}
       <div
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${isOverdue ? "bg-red-50 text-red-600 border-red-200" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${
+          isOverdue
+            ? "bg-red-50 text-red-600 border-red-200"
+            : isToday
+              ? "bg-amber-50 text-amber-600 border-amber-200"
+              : "bg-slate-50 text-slate-500 border-slate-200"
+        }`}
       >
         <RiCalendarLine size={12} />
         <span className="truncate">
@@ -192,4 +246,5 @@ const KanbanCard: React.FC<{
     </div>
   );
 };
+
 export default KanbanCard;

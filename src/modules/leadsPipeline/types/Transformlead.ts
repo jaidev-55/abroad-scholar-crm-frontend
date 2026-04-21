@@ -1,7 +1,7 @@
-import type { ApiLead, Lead, LeadStatus } from "../types/lead";
+import type { ApiLead, Lead, LeadStage, LeadStatus } from "../types/lead";
 
 // ─── Status → Stage map ───────────────────────────────────────────────────────
-const STATUS_TO_STAGE: Record<LeadStatus, string> = {
+const STATUS_TO_STAGE: Record<LeadStatus, LeadStage> = {
   NEW: "new",
   IN_PROGRESS: "progress",
   CONVERTED: "converted",
@@ -28,12 +28,12 @@ export function apiLeadToLocal(a: ApiLead): Lead {
     source: a.source,
     status: a.status,
     stage: STATUS_TO_STAGE[a.status] ?? "new",
-    // Capitalise first letter, lowercase rest: "HIGH" → "High"
     priority: (a.priority.charAt(0) +
       a.priority.slice(1).toLowerCase()) as Lead["priority"],
     counselor: a.counselor?.name ?? "",
     followUp: a.followUpDate?.split("T")[0] ?? "",
     ieltsScore: a.ieltsScore != null ? String(a.ieltsScore) : undefined,
+    category: a.category ?? null,
     notes: (a.notes ?? []).map((n) => ({
       id: n.id,
       text: n.content,

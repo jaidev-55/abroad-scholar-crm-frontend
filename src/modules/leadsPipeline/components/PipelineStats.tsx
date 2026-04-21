@@ -5,6 +5,8 @@ import {
   RiTimeLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
+  RiBookOpenLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import StatsCard from "../../../components/common/StatsCard";
 
@@ -14,6 +16,8 @@ interface Stats {
   followUpsDue: number;
   converted: number;
   lost: number;
+  academic?: number;
+  admission?: number;
 }
 
 interface Props {
@@ -62,10 +66,26 @@ const PipelineStats: React.FC<Props> = ({ stats }) => {
       twIconText: "text-red-500",
       twBarBg: "bg-red-500",
     },
+    {
+      label: "Academic",
+      value: stats.academic ?? 0,
+      icon: RiBookOpenLine,
+      twIconBg: "bg-violet-50",
+      twIconText: "text-violet-600",
+      twBarBg: "bg-violet-600",
+    },
+    {
+      label: "Admission",
+      value: stats.admission ?? 0,
+      icon: RiBuilding2Line,
+      twIconBg: "bg-cyan-50",
+      twIconText: "text-cyan-500",
+      twBarBg: "bg-cyan-500",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-5 gap-3">
+    <div className="grid grid-cols-7 gap-3">
       {statCards.map((stat) => (
         <StatsCard key={stat.label} {...stat} />
       ))}

@@ -53,6 +53,7 @@ const LeadsPipelinePage = () => {
   const [counselorFilter, setCounselorFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(""); // ← new
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDefaultStage, setAddModalDefaultStage] = useState<string>();
@@ -69,6 +70,7 @@ const LeadsPipelinePage = () => {
   >("notes");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStageId, setOverStageId] = useState<string | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -105,10 +107,15 @@ const LeadsPipelinePage = () => {
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
 
+  //  category filter wired in
   const filteredLeads = useMemo(() => {
-    if (!counselorFilter) return leads;
-    return leads.filter((l) => l.counselor === counselorFilter);
-  }, [leads, counselorFilter]);
+    let list = leads;
+    if (counselorFilter)
+      list = list.filter((l) => l.counselor === counselorFilter);
+    if (categoryFilter)
+      list = list.filter((l) => l.category === categoryFilter);
+    return list;
+  }, [leads, counselorFilter, categoryFilter]);
 
   const stats = useMemo(() => {
     const today = todayString();
@@ -120,17 +127,17 @@ const LeadsPipelinePage = () => {
       ).length,
       converted: filteredLeads.filter((l) => l.stage === "converted").length,
       lost: filteredLeads.filter((l) => l.stage === "lost").length,
+      academic: filteredLeads.filter((l) => l.category === "ACADEMIC").length,
+      admission: filteredLeads.filter((l) => l.category === "ADMISSION").length,
     };
   }, [filteredLeads]);
 
-  //  Counselors for filter dropdown
   const { data: counselorUsers = [] } = useQuery({
     queryKey: ["counselors"],
     queryFn: () => getUsers("COUNSELOR"),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Mutation: move lead
   const { mutate: moveLeadMutation } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) =>
       updateLead(id, { status }),
@@ -145,7 +152,6 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  //  Mutation: mark as lost
   const { mutate: markLostMutation } = useMutation({
     mutationFn: ({
       id,
@@ -172,7 +178,6 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  //  Mutation: add note
   const { mutate: addNoteMutation } = useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) =>
       updateLead(id, { notes: [{ content: text }] }),
@@ -184,10 +189,8 @@ const LeadsPipelinePage = () => {
     },
   });
 
-  // ── DnD handlers
-  const handleDragStart = (e: DragStartEvent) => {
+  const handleDragStart = (e: DragStartEvent) =>
     setActiveId(e.active.id as string);
-  };
 
   const handleDragOver = (e: DragOverEvent) => {
     const { over } = e;
@@ -225,7 +228,6 @@ const LeadsPipelinePage = () => {
       return;
     }
 
-    // Optimistic update
     queryClient.setQueryData<ApiLead[]>(
       queryKey,
       (old) =>
@@ -238,9 +240,7 @@ const LeadsPipelinePage = () => {
     moveLeadMutation({ id: active.id as string, status: newStatus });
   };
 
-  // ── Auto-open lead from email deep-links
   const autoOpenDone = useRef(false);
-
   useEffect(() => {
     if (isLoading || autoOpenDone.current || leads.length === 0) return;
     const params = new URLSearchParams(window.location.search);
@@ -256,7 +256,6 @@ const LeadsPipelinePage = () => {
     }, 100);
   }, [leads, isLoading]);
 
-  // ── Derived handlers ──────────────────────────────────────────────────────
   const handleAddNote = (leadId: string, text: string) => {
     if (notesDrawerLead?.id === leadId) {
       const optimisticNote: Note = {
@@ -272,9 +271,8 @@ const LeadsPipelinePage = () => {
     addNoteMutation({ id: leadId, text });
   };
 
-  const handleSaveLost = (leadId: string, reason: string, notes: string) => {
+  const handleSaveLost = (leadId: string, reason: string, notes: string) =>
     markLostMutation({ id: leadId, reason, notes });
-  };
 
   const handleSaveLead = () => {
     queryClient.invalidateQueries({ queryKey: ["leads"] });
@@ -282,21 +280,25 @@ const LeadsPipelinePage = () => {
     setAddModalDefaultStage(undefined);
   };
 
+  // ← categoryFilter added
   const clearFilters = () => {
     setSearch("");
     setSourceFilter("");
     setCounselorFilter("");
     setCountryFilter("");
     setPriorityFilter("");
+    setCategoryFilter("");
     setDateRange(null);
   };
 
+  // ← categoryFilter added
   const hasFilters = !!(
     search ||
     sourceFilter ||
     counselorFilter ||
     countryFilter ||
     priorityFilter ||
+    categoryFilter ||
     dateRange
   );
 
@@ -351,6 +353,7 @@ const LeadsPipelinePage = () => {
           onCounselorChange={setCounselorFilter}
           onCountryChange={setCountryFilter}
           onPriorityChange={setPriorityFilter}
+          onCategoryChange={setCategoryFilter}
           onDateRangeChange={(v: DateRangeValue) => setDateRange(v)}
         />
 
@@ -387,7 +390,6 @@ const LeadsPipelinePage = () => {
         </div>
       </div>
 
-      {/* ── Modals ── */}
       <GoogleSheetsImportModal
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
@@ -420,7 +422,6 @@ const LeadsPipelinePage = () => {
         onClose={() => setEmailModalLead(null)}
       />
 
-      {/* ── Drawers ── */}
       <LeadNotesDrawer
         lead={notesDrawerLead}
         onClose={() => setNotesDrawerLead(null)}

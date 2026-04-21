@@ -19,6 +19,7 @@ import {
   RiFlashlightLine,
   RiAddLine,
   RiDeleteBinLine,
+  RiBookOpenLine,
 } from "react-icons/ri";
 import type { Dayjs } from "dayjs";
 import type { Lead, LeadStage } from "../types/lead";
@@ -50,6 +51,7 @@ interface FormValues {
   counselor: string;
   followUp: Dayjs | null;
   ieltsScore: string;
+  category: string;
 }
 
 const SOURCE_OPTIONS = [
@@ -233,6 +235,7 @@ const LeadModal: React.FC<Props> = ({
       counselor: "",
       followUp: null,
       ieltsScore: "",
+      category: "",
     },
   });
 
@@ -253,6 +256,7 @@ const LeadModal: React.FC<Props> = ({
         priority: "Warm",
         counselor: "",
         followUp: null,
+        category: "",
         ieltsScore: "",
       });
     }
@@ -269,6 +273,7 @@ const LeadModal: React.FC<Props> = ({
     label: u.name,
   }));
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = watch();
   const stageCfg =
     STAGES.find((s) => s.id === watchedValues.stage) ?? STAGES[0];
@@ -324,6 +329,7 @@ const LeadModal: React.FC<Props> = ({
         ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
         followUpDate,
         notes: currentNotes.length > 0 ? currentNotes : undefined,
+        category: (data.category as "ACADEMIC" | "ADMISSION") || undefined,
       },
       {
         onSuccess: (res) => {
@@ -585,13 +591,38 @@ const LeadModal: React.FC<Props> = ({
               </div>
             </div>
 
-            <CustomInput
-              name="ieltsScore"
-              label="IELTS Score (optional)"
-              placeholder="e.g. 7.5"
-              icon={<RiAwardLine size={13} className="text-slate-300" />}
-              control={control}
-            />
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <CustomInput
+                  name="ieltsScore"
+                  label="IELTS Score (optional)"
+                  placeholder="e.g. 7.5"
+                  icon={<RiAwardLine size={13} className="text-slate-300" />}
+                  control={control}
+                />
+              </div>
+
+              <div className="flex-1">
+                <CustomSelect
+                  name="category"
+                  label="Lead Category"
+                  placeholder="Select category"
+                  control={control}
+                  required={true}
+                  errors={errors}
+                  options={[
+                    {
+                      value: "ACADEMIC",
+                      label: "🎓 Academic — IELTS / PTE Coaching",
+                    },
+                    {
+                      value: "ADMISSION",
+                      label: "🏫 Admission — University Applications",
+                    },
+                  ]}
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -657,6 +688,17 @@ const LeadModal: React.FC<Props> = ({
                     icon={<RiAwardLine size={13} />}
                     label="IELTS"
                     value={watchedValues.ieltsScore}
+                  />
+                )}
+                {watchedValues.category && (
+                  <ReviewRow
+                    icon={<RiBookOpenLine size={13} />}
+                    label="Category"
+                    value={
+                      watchedValues.category === "ACADEMIC"
+                        ? "🎓 Academic"
+                        : "🏫 Admission"
+                    }
                   />
                 )}
               </div>

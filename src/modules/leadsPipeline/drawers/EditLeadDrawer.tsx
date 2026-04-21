@@ -99,6 +99,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
           priority: lead.priority as EditFormValues["priority"],
           followUp: lead.followUp ? dayjs(lead.followUp) : null,
           ieltsScore: lead.ieltsScore || "",
+          category: lead.category ?? "",
         }
       : undefined,
   });
@@ -127,6 +128,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
           ? data.followUp.format("YYYY-MM-DD")
           : undefined,
         ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
+        category: (data.category as UpdateLeadPayload["category"]) || undefined,
       },
     });
   };
@@ -323,6 +325,24 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                     </span>
                   }
                   control={control}
+                />
+
+                <CustomSelect
+                  name="category"
+                  label="Lead Category"
+                  placeholder="Select category (optional)"
+                  control={control}
+                  errors={errors}
+                  options={[
+                    {
+                      value: "ACADEMIC",
+                      label: "🎓 Academic — IELTS / PTE Coaching",
+                    },
+                    {
+                      value: "ADMISSION",
+                      label: "🏫 Admission — University Applications",
+                    },
+                  ]}
                 />
               </div>
             </div>

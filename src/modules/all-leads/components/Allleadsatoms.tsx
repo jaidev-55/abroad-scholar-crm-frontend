@@ -3,8 +3,8 @@ import {
   RiFireLine,
   RiFlashlightLine,
   RiSnowflakeLine,
-  RiArrowUpLine,
-  RiArrowDownLine,
+  RiBookOpenLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import type {
   LeadStatus as ApiLeadStatus,
@@ -24,7 +24,6 @@ import {
   getInitials,
 } from "../utils/Allleadshelpers";
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
 export const Avatar: React.FC<{ name: string; size?: number }> = ({
   name,
   size = 32,
@@ -103,6 +102,35 @@ export const SrcBadge: React.FC<{ src: string }> = ({ src }) => {
   );
 };
 
+const CATEGORY_CONFIG = {
+  ACADEMIC: {
+    icon: RiBookOpenLine,
+    label: "Academic",
+    cls: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  ADMISSION: {
+    icon: RiBuilding2Line,
+    label: "Admission",
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+} as const;
+
+export const CategoryBadge: React.FC<{ category?: string | null }> = ({
+  category,
+}) => {
+  if (!category) return <span className="text-[11px] text-slate-300">—</span>;
+  const cfg = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG];
+  if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
+  const Icon = cfg.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${cfg.cls}`}
+    >
+      <Icon size={10} /> {cfg.label}
+    </span>
+  );
+};
+
 // ─── Stat card ────────────────────────────────────────────────────────────────
 interface StatCardProps {
   label: string;
@@ -110,7 +138,7 @@ interface StatCardProps {
   icon: React.ComponentType<{ size?: number }>;
   colorCls: string;
   barCls: string;
-  delta?: number;
+
   loading?: boolean;
 }
 
@@ -120,10 +148,10 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon: Icon,
   colorCls,
   barCls,
-  delta,
+
   loading,
 }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3 relative overflow-hidden hover:shadow-md hover:shadow-slate-100 transition-all duration-200 cursor-default">
+  <div className="bg-white rounded-2xl border border-slate-100 p-3 flex items-center gap-3 relative overflow-hidden hover:shadow-md hover:shadow-slate-100 transition-all duration-200 cursor-default">
     <div
       className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${colorCls}`}
     >
@@ -140,18 +168,6 @@ export const StatCard: React.FC<StatCardProps> = ({
           <p className="text-2xl font-black text-slate-900 leading-none">
             {value}
           </p>
-        )}
-        {delta !== undefined && !loading && (
-          <span
-            className={`text-[10px] font-bold flex items-center gap-0.5 ${delta >= 0 ? "text-emerald-600" : "text-red-500"}`}
-          >
-            {delta >= 0 ? (
-              <RiArrowUpLine size={10} />
-            ) : (
-              <RiArrowDownLine size={10} />
-            )}
-            {Math.abs(delta)}%
-          </span>
         )}
       </div>
     </div>

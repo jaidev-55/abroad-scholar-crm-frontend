@@ -10,11 +10,20 @@ import {
   RiFileListLine,
   RiInformationLine,
   RiCheckLine,
+  RiBookOpenLine,
 } from "react-icons/ri";
 import CustomModal from "../../../components/common/CustomModal";
 import CustomInput from "../../../components/common/CustomInput";
 import CustomSelect from "../../../components/common/CustomSelect";
 import type { CreateWebhookConfigPayload } from "../../../api/webhook";
+
+// Local form type — category is string to avoid RHF defaultValues type conflict
+interface ConnectFormValues {
+  platform: string;
+  formId: string;
+  formName: string;
+  category: string;
+}
 
 interface Props {
   open: boolean;
@@ -38,13 +47,25 @@ const ConnectFormModal: React.FC<Props> = ({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<CreateWebhookConfigPayload>({
-    defaultValues: { platform: "", formId: "", formName: "" },
+  } = useForm<ConnectFormValues>({
+    defaultValues: { platform: "", formId: "", formName: "", category: "" },
   });
 
   const handleClose = () => {
     reset();
     onClose();
+  };
+
+  // Cast local form values to the API payload type
+  const handleFormSubmit = (values: ConnectFormValues) => {
+    onSubmit({
+      platform: values.platform,
+      formId: values.formId,
+      formName: values.formName,
+      category:
+        (values.category as CreateWebhookConfigPayload["category"]) ||
+        undefined,
+    });
   };
 
   return (
@@ -73,7 +94,7 @@ const ConnectFormModal: React.FC<Props> = ({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-4">
         <CustomSelect
           name="platform"
           label="Ad Platform"
@@ -125,6 +146,34 @@ const ConnectFormModal: React.FC<Props> = ({
           icon={<RiFileListLine size={14} className="text-slate-400" />}
         />
 
+        {/* Category — tells the system which campaign type this form captures */}
+        <CustomSelect
+          name="category"
+          label="Lead Category"
+          placeholder="Select category (optional)"
+          control={control}
+          errors={errors}
+          icon={<RiBookOpenLine size={14} className="text-slate-400" />}
+          options={[
+            {
+              value: "ACADEMIC",
+              label: (
+                <span className="flex items-center gap-2">
+                  🎓 Academic — IELTS / PTE Coaching
+                </span>
+              ),
+            },
+            {
+              value: "ADMISSION",
+              label: (
+                <span className="flex items-center gap-2">
+                  🏫 Admission — University Applications
+                </span>
+              ),
+            },
+          ]}
+        />
+
         {/* Help text */}
         <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
           <RiInformationLine
@@ -135,7 +184,8 @@ const ConnectFormModal: React.FC<Props> = ({
             You can find the Form ID in your{" "}
             <strong>Meta Ads Manager → Lead Forms</strong> or{" "}
             <strong>Google Ads → Lead Form Extensions</strong>. Only leads from
-            active forms will be synced.
+            active forms will be synced. Setting a <strong>category</strong>{" "}
+            helps separate IELTS leads from Admission leads in your pipeline.
           </p>
         </div>
 

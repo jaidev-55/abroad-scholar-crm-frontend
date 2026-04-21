@@ -1,14 +1,8 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Modal, message, Spin } from "antd";
 import { Select } from "antd";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  RiUserLine,
-  RiFireLine,
-  RiTimeLine,
-  RiCheckboxCircleLine,
-  RiCloseCircleLine,
   RiUserSmileLine,
   RiCheckLine,
   RiRefreshLine,
@@ -22,32 +16,34 @@ import {
   type LeadStatus as ApiLeadStatus,
   type LeadPriority,
 } from "../../leadsPipeline/api/leads";
-import { StatCard } from "../components/Allleadsatoms";
 import { apiLeadToLocal } from "../utils/Allleadshelpers";
 import AllLeadsTable from "../components/Allleadstable";
 import ExportModal from "../../leadsPipeline/modals/ExportModal";
 import DeleteConfirmModal from "../components/Deleteconfirmmodal";
 import DetailDrawer from "../components/Detaildrawer";
-import type { DateRangeValue } from "../../leadsPipeline/types/lead";
+import type {
+  DateRangeValue,
+  LeadCategory,
+} from "../../leadsPipeline/types/lead";
 import FilterBar from "../components/FilterBar";
 import { getUsers } from "../../../api/auth";
 import { getIsAdmin } from "../../../utils/getStoredUser";
+import PipelineStats from "../../leadsPipeline/components/PipelineStats";
 
 type BulkModalType = "assign" | null;
 
 const AllLeadsPage: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // ── Filter state ──────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [sourceF, setSourceF] = useState<string>("");
   const [counselorF, setCounselorF] = useState<string>("");
   const [countryF, setCountryF] = useState<string>("");
   const [priorityF, setPriorityF] = useState<LeadPriority | "">("");
   const [statusF, setStatusF] = useState<ApiLeadStatus | "">("");
+  const [categoryF, setCategoryF] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
 
-  // ── UI state ──────────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkModal, setBulkModal] = useState<BulkModalType>(null);
   const [bulkValue, setBulkValue] = useState<string | null>(null);
@@ -78,6 +74,7 @@ const AllLeadsPage: React.FC = () => {
       countryF,
       priorityF,
       statusF,
+      categoryF,
       dateRange?.[0]?.format("YYYY-MM-DD"),
       dateRange?.[1]?.format("YYYY-MM-DD"),
     ],
@@ -88,6 +85,7 @@ const AllLeadsPage: React.FC = () => {
         country: countryF || undefined,
         priority: priorityF || undefined,
         status: statusF || undefined,
+        category: (categoryF as LeadCategory) || undefined,
         startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         endDate: dateRange?.[1]
           ? dateRange[1].add(1, "day").format("YYYY-MM-DD")
@@ -162,6 +160,7 @@ const AllLeadsPage: React.FC = () => {
     setCountryF("");
     setPriorityF("");
     setStatusF("");
+    setCategoryF(""); // ← new
     setDateRange(null);
   }, []);
 
@@ -180,15 +179,19 @@ const AllLeadsPage: React.FC = () => {
   const stats = useMemo(
     () => ({
       total: rawLeads.length,
-      hot: rawLeads.filter((r) => r.priority === "HOT").length,
-      due: rawLeads.filter(
+      newToday: rawLeads.filter(
+        (r) => r.createdAt && r.createdAt.split("T")[0] === today,
+      ).length,
+      followUpsDue: rawLeads.filter(
         (r) =>
           r.followUpDate &&
           r.followUpDate.split("T")[0] <= today &&
           r.status !== "LOST",
       ).length,
-      conv: rawLeads.filter((r) => r.status === "CONVERTED").length,
+      converted: rawLeads.filter((r) => r.status === "CONVERTED").length,
       lost: rawLeads.filter((r) => r.status === "LOST").length,
+      academic: rawLeads.filter((r) => r.category === "ACADEMIC").length,
+      admission: rawLeads.filter((r) => r.category === "ADMISSION").length,
     }),
     [rawLeads, today],
   );
@@ -200,6 +203,7 @@ const AllLeadsPage: React.FC = () => {
     countryF ||
     priorityF ||
     statusF ||
+    categoryF ||
     dateRange
   );
 
@@ -232,53 +236,8 @@ const AllLeadsPage: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-3">
-          <StatCard
-            label="Total Leads"
-            value={stats.total}
-            icon={RiUserLine}
-            colorCls="bg-blue-50 text-blue-500"
-            barCls="bg-gradient-to-r from-blue-400 to-blue-600"
-            delta={12}
-            loading={isLoading}
-          />
-          <StatCard
-            label="Hot Leads"
-            value={stats.hot}
-            icon={RiFireLine}
-            colorCls="bg-red-50 text-red-500"
-            barCls="bg-gradient-to-r from-red-400 to-red-600"
-            delta={5}
-            loading={isLoading}
-          />
-          <StatCard
-            label="Follow-ups Due"
-            value={stats.due}
-            icon={RiTimeLine}
-            colorCls="bg-amber-50 text-amber-500"
-            barCls="bg-gradient-to-r from-amber-400 to-amber-600"
-            delta={-3}
-            loading={isLoading}
-          />
-          <StatCard
-            label="Converted"
-            value={stats.conv}
-            icon={RiCheckboxCircleLine}
-            colorCls="bg-emerald-50 text-emerald-500"
-            barCls="bg-gradient-to-r from-emerald-400 to-emerald-600"
-            delta={8}
-            loading={isLoading}
-          />
-          <StatCard
-            label="Lost"
-            value={stats.lost}
-            icon={RiCloseCircleLine}
-            colorCls="bg-slate-100 text-slate-500"
-            barCls="bg-gradient-to-r from-slate-300 to-slate-500"
-            delta={-2}
-            loading={isLoading}
-          />
-        </div>
+
+        <PipelineStats stats={stats} />
 
         <FilterBar
           filteredCount={filtered.length}
@@ -288,6 +247,7 @@ const AllLeadsPage: React.FC = () => {
           isAdmin={isAdmin}
           clearFilters={clearFilters}
           onStatusChange={(v) => setStatusF(v as ApiLeadStatus | "")}
+          onCategoryChange={setCategoryF}
           counselorUsers={counselorUsers}
           onExport={() => setExportModalOpen(true)}
           onSearchChange={setSearch}

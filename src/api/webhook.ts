@@ -1,12 +1,16 @@
 import axiosInstance from "../utils/axiosInstance";
 
 // ─── Types ───────────────────────────────────────────
+
+export type LeadCategory = "ACADEMIC" | "ADMISSION";
+
 export interface WebhookConfig {
   id: string;
   platform: string;
   formId: string;
   formName: string;
   isActive: boolean;
+  category: LeadCategory | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +19,8 @@ export interface CreateWebhookConfigPayload {
   platform: string;
   formId: string;
   formName: string;
+  isActive?: boolean;
+  category?: LeadCategory;
 }
 
 export interface SyncResult {

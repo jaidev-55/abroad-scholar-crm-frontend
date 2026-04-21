@@ -12,6 +12,8 @@ import {
   RiDeleteBinLine,
   RiCloseCircleLine,
   RiLoader4Line,
+  RiBookOpenLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import type {
   ApiLead,
@@ -50,6 +52,33 @@ const AllLeadsTable: React.FC<Props> = ({
   onClearFilters,
   onRefetch,
 }) => {
+  const CATEGORY_CONFIG = {
+    ACADEMIC: {
+      icon: <RiBookOpenLine size={10} />,
+      label: "Academic",
+      cls: "bg-violet-50 text-violet-700 border-violet-200",
+    },
+    ADMISSION: {
+      icon: <RiBuilding2Line size={10} />,
+      label: "Admission",
+      cls: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+  } as const;
+
+  const CategoryBadge: React.FC<{ category?: string | null }> = ({
+    category,
+  }) => {
+    if (!category) return <span className="text-[11px] text-slate-300">—</span>;
+    const cfg = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG];
+    if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+      >
+        {cfg.icon} {cfg.label}
+      </span>
+    );
+  };
   const baseColumns: TableColumnsType<ApiLead> = [
     {
       title: (
@@ -59,13 +88,12 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "fullName",
       key: "name",
-      width: 150,
-      fixed: "left",
+      width: 180,
       ellipsis: true,
       sorter: (a, b) => a.fullName.localeCompare(b.fullName),
       render: (name: string, rec: ApiLead) => (
         <Tooltip title={`${name} · ${rec.country ?? ""}`} mouseEnterDelay={0.5}>
-          <div className="flex items-center gap-2.5 py-0.5 w-full overflow-hidden">
+          <div className="flex items-center gap-2.5 py-0.5 w-full overflow-hidden group/row">
             <Avatar name={name} size={34} />
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
@@ -75,6 +103,18 @@ const AllLeadsTable: React.FC<Props> = ({
                 <RiGlobalLine size={9} /> {rec.country}
               </div>
             </div>
+            {/* Delete button — only visible on row hover, only for admin */}
+            {isAdmin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteClick(rec.id, rec.fullName, e);
+                }}
+                className="opacity-0 group-hover/row:opacity-100 w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all shrink-0"
+              >
+                <RiDeleteBinLine size={13} />
+              </button>
+            )}
             {rec.status === "LOST" && (
               <Tooltip title="Lost">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
@@ -144,6 +184,22 @@ const AllLeadsTable: React.FC<Props> = ({
       width: 120,
       align: "center",
       render: (src: string) => <SrcBadge src={src} />,
+    },
+    {
+      title: (
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Category
+        </span>
+      ),
+      dataIndex: "category",
+      key: "category",
+      width: 110,
+      align: "center" as const,
+      render: (_: unknown, rec: ApiLead) => (
+        <div className="flex justify-center">
+          <CategoryBadge category={rec.category} />
+        </div>
+      ),
     },
     {
       title: (
@@ -289,44 +345,10 @@ const AllLeadsTable: React.FC<Props> = ({
     },
   ];
 
-  // Action column only for ADMIN — use spread+ternary, NOT {isAdmin && obj} inside array
-  const columns: TableColumnsType<ApiLead> = isAdmin
-    ? [
-        ...baseColumns,
-        {
-          title: (
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Action
-            </span>
-          ),
-          key: "action",
-          width: 60,
-          align: "center" as const,
-          fixed: "right" as const,
-          render: (_: unknown, rec: ApiLead) => (
-            <Tooltip title="Delete lead" placement="left">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteClick(rec.id, rec.fullName, e);
-                }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all duration-150 group"
-              >
-                <RiDeleteBinLine
-                  size={14}
-                  className="group-hover:scale-110 transition-transform"
-                />
-              </button>
-            </Tooltip>
-          ),
-        },
-      ]
-    : baseColumns;
+  const columns: TableColumnsType<ApiLead> = baseColumns;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden relative">
-      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent z-10 rounded-r-2xl" />
-
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm relative">
       {isError && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <RiCloseCircleLine size={32} className="text-red-300" />
@@ -352,6 +374,7 @@ const AllLeadsTable: React.FC<Props> = ({
           dataSource={data}
           columns={columns}
           rowKey="id"
+          className="[&_.ant-table-container]:!rounded-none [&_.ant-table-body]:!overflow-x-auto"
           scroll={{ x: "max-content", y: 560 }}
           size="small"
           loading={{

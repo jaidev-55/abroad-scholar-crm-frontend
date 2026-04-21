@@ -1,5 +1,7 @@
 import {
   RiArrowDownSLine,
+  RiBookOpenLine,
+  RiBuilding2Line,
   RiDownloadLine,
   RiFilter3Line,
   RiRefreshLine,
@@ -24,6 +26,15 @@ const STATUSES = [
   { value: "LOST", label: "Lost" },
 ];
 
+const CATEGORIES = [
+  { value: "ACADEMIC", label: "Academic", icon: <RiBookOpenLine size={12} /> },
+  {
+    value: "ADMISSION",
+    label: "Admission",
+    icon: <RiBuilding2Line size={12} />,
+  },
+];
+
 interface CounselorUser {
   id: string;
   name: string;
@@ -44,6 +55,7 @@ interface FilterBarProps {
   onCountryChange: (v: string) => void;
   onPriorityChange: (v: string) => void;
   onStatusChange: (v: string) => void;
+  onCategoryChange: (v: string) => void;
   onDateRangeChange: (v: DateRangeValue) => void;
 }
 
@@ -62,6 +74,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   onCountryChange,
   onPriorityChange,
   onStatusChange,
+  onCategoryChange,
   onDateRangeChange,
 }) => {
   const [showFilters, setShowFilters] = useState(true);
@@ -78,6 +91,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
       country: "",
       priority: "",
       status: "",
+      category: "",
       dateRange: null as DateRangeValue,
     },
   });
@@ -106,7 +120,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
               className={`transition-transform duration-200 ${showFilters ? "rotate-180" : ""}`}
             />
           </button>
-
           {hasFilters && (
             <button
               type="button"
@@ -118,7 +131,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
             </button>
           )}
         </div>
-
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-400">
             {filteredCount} of {totalCount} leads
@@ -134,116 +146,124 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
 
-      {/* Filter inputs — row 1 */}
       {showFilters && (
-        <>
-          <div className="flex w-full gap-2 items-end mb-2">
-            {/* Search */}
-            <div className="flex-[2] min-w-0">
-              <CustomInput
-                name="search"
-                label="Search"
-                placeholder="Search by name or phone…"
-                control={control}
-                icon={<RiSearchLine size={14} className="text-slate-400" />}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  onSearchChange(e.target.value)
-                }
-              />
-            </div>
-
-            {/* Source */}
-            {isAdmin && (
-              <div className="flex-1 min-w-0">
-                <CustomSelect
-                  name="source"
-                  label="Source"
-                  placeholder="All Sources"
-                  control={control}
-                  errors={errors}
-                  options={SOURCES.map((s) => ({ value: s, label: s }))}
-                  onChange={(v: string) => onSourceChange(v ?? "")}
-                />
-              </div>
-            )}
-
-            {/* Status */}
-            <div className="flex-1 min-w-0">
-              <CustomSelect
-                name="status"
-                label="Status"
-                placeholder="All Status"
-                control={control}
-                errors={errors}
-                options={STATUSES}
-                onChange={(v: string) => onStatusChange(v ?? "")}
-              />
-            </div>
-
-            {/* Counselor — sends ID to API */}
-            <div className="flex-1 min-w-0">
-              <CustomSelect
-                name="counselor"
-                label="Counselor"
-                placeholder="All Counselors"
-                control={control}
-                errors={errors}
-                options={counselorUsers.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                }))}
-                onChange={(v: string) => onCounselorChange(v ?? "")}
-              />
-            </div>
-
-            {/* Country */}
-            <div className="flex-1 min-w-0">
-              <CustomSelect
-                name="country"
-                label="Country"
-                placeholder="All Countries"
-                control={control}
-                errors={errors}
-                options={COUNTRIES.map((c) => ({ value: c, label: c }))}
-                onChange={(v: string) => onCountryChange(v ?? "")}
-              />
-            </div>
-
-            {/* Priority */}
-            <div className="flex-1 min-w-0">
-              <CustomSelect
-                name="priority"
-                label="Priority"
-                placeholder="All Priorities"
-                control={control}
-                errors={errors}
-                options={PRIORITIES.map((p) => ({ value: p, label: p }))}
-                onChange={(v: string) => onPriorityChange(v ?? "")}
-              />
-            </div>
-
-            {/* Date range */}
-            <div className="flex-[1.8] min-w-0">
-              <CustomDatePicker
-                mode="range"
-                name="dateRange"
-                label={
-                  dateFilterMode === "created"
-                    ? "Created Date"
-                    : "Follow-up Date"
-                }
-                placeholder={
-                  dateFilterMode === "created"
-                    ? ["Created from", "Created to"]
-                    : ["Follow-up from", "Follow-up to"]
-                }
-                control={control}
-                errors={errors}
-                onChange={(v) => onDateRangeChange(v ?? null)}
-              />
-            </div>
+        <div className="flex w-full gap-2 items-center flex-wrap">
+          {/* Search */}
+          <div className="flex-[1.5] min-w-0">
+            <CustomInput
+              name="search"
+              label="Search"
+              placeholder="Search by name or phone…"
+              control={control}
+              icon={<RiSearchLine size={14} className="text-slate-400" />}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onSearchChange(e.target.value)
+              }
+            />
           </div>
-        </>
+
+          {/* Source — admin only */}
+          {isAdmin && (
+            <div className="flex-1 min-w-0">
+              <CustomSelect
+                name="source"
+                label="Source"
+                placeholder="All Sources"
+                control={control}
+                errors={errors}
+                options={SOURCES.map((s) => ({ value: s, label: s }))}
+                onChange={(v: string) => onSourceChange(v ?? "")}
+              />
+            </div>
+          )}
+
+          {/* Category — visible to all */}
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="category"
+              label="Category"
+              placeholder="All Categories"
+              control={control}
+              errors={errors}
+              options={CATEGORIES}
+              onChange={(v: string) => onCategoryChange(v ?? "")}
+            />
+          </div>
+
+          {/* Status */}
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="status"
+              label="Status"
+              placeholder="All Status"
+              control={control}
+              errors={errors}
+              options={STATUSES}
+              onChange={(v: string) => onStatusChange(v ?? "")}
+            />
+          </div>
+
+          {/* Counselor */}
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="counselor"
+              label="Counselor"
+              placeholder="All Counselors"
+              control={control}
+              errors={errors}
+              options={counselorUsers.map((u) => ({
+                value: u.id,
+                label: u.name,
+              }))}
+              onChange={(v: string) => onCounselorChange(v ?? "")}
+            />
+          </div>
+
+          {/* Country */}
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="country"
+              label="Country"
+              placeholder="All Countries"
+              control={control}
+              errors={errors}
+              options={COUNTRIES.map((c) => ({ value: c, label: c }))}
+              onChange={(v: string) => onCountryChange(v ?? "")}
+            />
+          </div>
+
+          {/* Priority */}
+          <div className="flex-1 min-w-0">
+            <CustomSelect
+              name="priority"
+              label="Priority"
+              placeholder="All Priorities"
+              control={control}
+              errors={errors}
+              options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+              onChange={(v: string) => onPriorityChange(v ?? "")}
+            />
+          </div>
+
+          {/* Date range */}
+          <div className="flex-[1.8] min-w-0">
+            <CustomDatePicker
+              mode="range"
+              name="dateRange"
+              label={
+                dateFilterMode === "created" ? "Created Date" : "Follow-up Date"
+              }
+              placeholder={
+                dateFilterMode === "created"
+                  ? ["Created from", "Created to"]
+                  : ["Follow-up from", "Follow-up to"]
+              }
+              control={control}
+              errors={errors}
+              onChange={(v) => onDateRangeChange(v ?? null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

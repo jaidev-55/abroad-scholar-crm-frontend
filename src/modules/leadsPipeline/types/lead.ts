@@ -10,6 +10,7 @@ export type LeadPriorityRaw =
   | "WARM"
   | "COLD";
 export type LeadStage = "new" | "progress" | "applied" | "converted" | "lost";
+export type LeadCategory = "ACADEMIC" | "ADMISSION"; // ← new
 
 // Single consistent priority type — transformLead always produces Hot/Warm/Cold
 export type LeadPriority = "Hot" | "Warm" | "Cold";
@@ -40,6 +41,7 @@ export interface ApiLead {
   notes?: ApiNote[];
   createdAt: string;
   updatedAt: string;
+  category?: LeadCategory | null; // ← new
 }
 
 // ─── Local app shape ──────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ export interface Lead {
   notes: Note[];
   createdAt: string;
   updatedAt: string;
+  category?: LeadCategory | null;
 }
 
 // ─── Stage config shape ───────────────────────────────────────────────────────
@@ -124,6 +127,7 @@ export interface EditFormValues {
   priority: LeadPriority;
   followUp: Dayjs | null;
   ieltsScore: string;
+  category: string;
 }
 
 // ─── Activity ─────────────────────────────────────────────────────────────────

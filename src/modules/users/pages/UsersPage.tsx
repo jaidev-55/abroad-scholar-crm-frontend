@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import { message } from "antd";
-import { FiDownload, FiRefreshCw, FiUserPlus } from "react-icons/fi";
-import { Spin } from "antd";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createUser,
@@ -11,7 +9,6 @@ import {
   type User,
 } from "../api/user";
 import type { AddUserFormValues } from "../utils/constants";
-import { exportUsersCSV } from "../utils/helpers";
 import UserStatsRow from "../components/UserStatsRow";
 import UsersTable from "../components/UsersTable";
 import AddUserModal from "../components/AddUserModal";
@@ -97,31 +94,6 @@ const UsersPage = () => {
           <p className="text-[13px] text-slate-400">
             Manage staff accounts, roles & permissions
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => exportUsersCSV(filteredUsers)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 cursor-pointer transition-all shadow-sm"
-            title="Export CSV"
-          >
-            <FiDownload size={15} />
-          </button>
-          <button
-            onClick={() =>
-              queryClient.invalidateQueries({ queryKey: ["users"] })
-            }
-            disabled={isLoading}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 cursor-pointer transition-all shadow-sm disabled:opacity-50"
-            title="Refresh"
-          >
-            {isLoading ? <Spin size="small" /> : <FiRefreshCw size={15} />}
-          </button>
-          <button
-            onClick={() => setAddUserOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold border-none cursor-pointer transition-all shadow-sm"
-          >
-            <FiUserPlus size={14} /> Add User
-          </button>
         </div>
       </div>
 
