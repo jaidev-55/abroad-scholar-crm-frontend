@@ -24,14 +24,54 @@ jobs:
             cd /home/deployer/abroad-scholar-frontend
             git pull origin main
 
-            docker stop frontend || true
-            docker rm frontend || true
-            docker rmi -f abroad-scholar-frontend || true
-            docker build --no-cache -t abroad-scholar-frontend /home/deployer/abroad-scholar-frontend
-            docker run -d \
-              --name frontend \
-              --restart always \
-              -p 3000:80 \
-              abroad-scholar-frontend
+            # Build new image with timestamp tag
+            docker build --no-cache -t abroad-scholar-frontend:new .
 
-            echo "✅ Frontend deployed successfully!"
+            # Start new container on port 3001 (while old still runs on 3000)
+            docker stop frontend-new || true
+            docker rm frontend-new || true
+            docker run -d \
+              --name frontend-new \
+              -p 3001:80 \
+              abroad-scholar-frontend:new
+
+            # Wait for new container to be healthy
+            echo "Waiting for new container to be ready..."
+            sleep 5
+
+            # Check if new container is running
+            if [ $(docker inspect -f '{{.State.Running}}' frontend-new) = "true" ]; then
+              echo "✅ New container is healthy, switching traffic..."
+
+              # Update nginx to point to new container
+              sudo sed -i 's/localhost:3000/localhost:3001/' /etc/nginx/sites-available/crm.abroadscholars.in
+              sudo nginx -s reload
+
+              # Stop old container
+              docker stop frontend || true
+              docker rm frontend || true
+
+              # Rename new to current
+              docker stop frontend-new
+              docker rm frontend-new
+              docker run -d \
+                --name frontend \
+                --restart always \
+                -p 3000:80 \
+                abroad-scholar-frontend:new
+
+              # Switch nginx back to 3000
+              sudo sed -i 's/localhost:3001/localhost:3000/' /etc/nginx/sites-available/crm.abroadscholars.in
+              sudo nginx -s reload
+
+              # Cleanup old image
+              docker rmi abroad-scholar-frontend:latest || true
+              docker tag abroad-scholar-frontend:new abroad-scholar-frontend:latest
+
+              echo "✅ Zero downtime deployment complete!"
+            else
+              echo "❌ New container failed to start, keeping old container running"
+              docker stop frontend-new || true
+              docker rm frontend-new || true
+              exit 1
+            fi
