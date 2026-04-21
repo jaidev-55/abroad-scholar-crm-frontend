@@ -14,6 +14,7 @@ export const SOURCES = [
   "WALK-IN",
   "GOOGLE ADS",
   "EDUCATION FAIR",
+  "WHATSAPP",
 ];
 
 // COUNSELORS

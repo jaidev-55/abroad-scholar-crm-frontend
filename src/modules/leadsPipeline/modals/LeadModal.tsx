@@ -61,6 +61,7 @@ const SOURCE_OPTIONS = [
   "GOOGLE_ADS",
   "META_ADS",
   "REFERRAL",
+  "WHATSAPP",
 ].map((s) => ({
   value: s,
   label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
