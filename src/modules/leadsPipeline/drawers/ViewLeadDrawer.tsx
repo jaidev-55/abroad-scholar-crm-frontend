@@ -41,6 +41,7 @@ import UserAvatar from "../../../components/common/UserAvatar";
 import DetailRow from "../../../components/common/Detailrow";
 import ViewActivityCard from "../components/Viewactivitycard";
 import { STAGE_MAP } from "../utils/viewLeadConstants";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -63,6 +64,8 @@ const ViewLeadDrawer: React.FC<Props> = ({
   );
   const [activitySearch, setActivitySearch] = useState("");
   const [newNote, setNewNote] = useState("");
+
+  const isAdmin = getIsAdmin();
 
   // Fetch fresh lead data so the drawer always reflects latest server state
   const { data: freshLead, isLoading: leadLoading } = useQuery({
@@ -206,9 +209,11 @@ const ViewLeadDrawer: React.FC<Props> = ({
             )}
             {displayLead.priority}
           </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-            <RiMapPinLine size={11} /> {displayLead.source}
-          </span>
+          {isAdmin && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
+              <RiMapPinLine size={11} /> {displayLead.source}
+            </span>
+          )}
           {displayLead.counselor && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
               <RiUserSmileLine size={11} /> {displayLead.counselor}

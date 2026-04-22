@@ -23,6 +23,7 @@ import { STAGES } from "../utils/constants";
 import UserAvatar from "../../../components/common/UserAvatar";
 import SourceBadge from "../../../components/common/badges/SourceBadge";
 import PriorityBadge from "../../../components/common/badges/PriorityBadge";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 // Category badge
 const CATEGORY_CONFIG = {
@@ -76,6 +77,7 @@ const KanbanCard: React.FC<{
   isDragging = false,
 }) => {
   const { attributes, listeners, setNodeRef } = useSortable({ id: lead.id });
+  const isAdmin = getIsAdmin();
 
   const isOverdue = lead.followUp
     ? new Date(lead.followUp) < new Date()
@@ -202,7 +204,8 @@ const KanbanCard: React.FC<{
 
       {/* Badges — source + priority + category */}
       <div className="flex flex-wrap gap-1.5 mb-3">
-        <SourceBadge source={lead.source} />
+        {isAdmin && <SourceBadge source={lead.source} />}{" "}
+        {/* ← hide for counselors */}
         <PriorityBadge priority={lead.priority} />
         <CategoryBadge category={lead.category} />
       </div>

@@ -345,7 +345,9 @@ const AllLeadsTable: React.FC<Props> = ({
     },
   ];
 
-  const columns: TableColumnsType<ApiLead> = baseColumns;
+  const columns = isAdmin
+    ? baseColumns
+    : baseColumns.filter((col) => (col as { key?: string }).key !== "source");
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm relative">
