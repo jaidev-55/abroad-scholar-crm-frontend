@@ -42,7 +42,7 @@ const StepClassification: React.FC<Props> = ({
     {/* Stage */}
     <div>
       <label className="block text-xs font-semibold text-gray-800 mb-2">
-        Pipeline Stage
+        Pipeline Stage <span className="text-red-500">*</span>
       </label>
       <Controller
         name="stage"
@@ -73,7 +73,7 @@ const StepClassification: React.FC<Props> = ({
     {/* Priority */}
     <div>
       <label className="block text-xs font-semibold text-gray-800 mb-2">
-        Priority
+        Priority <span className="text-red-500">*</span>
       </label>
       <Controller
         name="priority"
@@ -136,6 +136,7 @@ const StepClassification: React.FC<Props> = ({
       placeholder="e.g. 7.5"
       icon={<RiAwardLine size={13} className="text-slate-300" />}
       control={control}
+      required
     />
   </div>
 );

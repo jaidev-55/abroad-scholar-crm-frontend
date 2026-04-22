@@ -29,6 +29,7 @@ const StepPersonalInfo: React.FC<Props> = ({ control, errors }) => (
 
     <CustomInput
       name="name"
+      required={true}
       label="Full Name"
       placeholder="e.g. Aarav Mehta"
       icon={<RiUserLine size={13} className="text-slate-300" />}
@@ -40,6 +41,7 @@ const StepPersonalInfo: React.FC<Props> = ({ control, errors }) => (
       <div className="flex-1">
         <CustomInput
           name="phone"
+          required
           label="Phone Number"
           placeholder="+91 9000000000"
           icon={<RiPhoneLine size={13} className="text-slate-300" />}
