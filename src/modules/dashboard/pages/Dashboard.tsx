@@ -105,7 +105,9 @@ const Dashboard = () => {
     queryKey: ["dashboard", "stats", ...baseKey],
     queryFn: () => getDashboardStats(queryParams),
     enabled: isCustomReady,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 
   const trendQuery = useQuery({
@@ -113,37 +115,46 @@ const Dashboard = () => {
     queryFn: () => getLeadsTrend({ ...queryParams, groupBy: "day" }),
     enabled: isCustomReady,
     staleTime: 0,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
   });
 
   const sourcesQuery = useQuery({
     queryKey: ["dashboard", "sources", ...baseKey],
     queryFn: () => getLeadSources(queryParams),
-    enabled: isCustomReady && isAdmin, // don't fetch if not needed
-    staleTime: 60_000,
+    enabled: isCustomReady && isAdmin,
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 
   const pipelineQuery = useQuery({
     queryKey: ["dashboard", "pipeline", ...baseKey],
     queryFn: () => getPipeline(queryParams),
     enabled: isCustomReady,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
   });
 
   const counselorsQuery = useQuery({
     queryKey: ["dashboard", "counselors", ...baseKey],
     queryFn: () => getTopCounselors({ ...queryParams, limit: 5 }),
     enabled: isCustomReady,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 
   const recentLeadsQuery = useQuery({
     queryKey: ["dashboard", "recent-leads", ...baseKey],
     queryFn: () => getRecentLeads({ ...queryParams, limit: 100, offset: 0 }),
     enabled: isCustomReady,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
   });
 
-  // ─── Refresh ──────────────────────────────────────────────────────────────
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -158,7 +169,7 @@ const Dashboard = () => {
     }
   }, [queryClient]);
 
-  // ─── Export PDF ───────────────────────────────────────────────────────────
+  //  Export PDF
   const handleExportPDF = useCallback(async () => {
     setIsExporting(true);
     try {
