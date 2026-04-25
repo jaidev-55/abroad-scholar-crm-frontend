@@ -19,6 +19,8 @@ import { DEMO_NOTIFICATIONS, TYPE_CFG } from "./constants";
 import ToastCard from "./ToastCard";
 import NotificationDropdown from "./NotificationDropdown";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface ClearedEntry {
   id: string;
   clearedAt: number;
@@ -26,7 +28,7 @@ interface ClearedEntry {
 
 const CLEAR_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
 
-// localStorage helpers
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
 const loadClearedIds = (): Set<string> => {
   try {
@@ -38,6 +40,7 @@ const loadClearedIds = (): Set<string> => {
     localStorage.setItem("notif-cleared", JSON.stringify(valid));
     return new Set(valid.map((e) => e.id));
   } catch {
+    // localStorage unavailable — silently ignore
     return new Set();
   }
 };
@@ -52,7 +55,7 @@ const saveClearedEntries = (entries: ClearedEntry[]) => {
   }
 };
 
-// ─── NotificationBell
+// ─── NotificationBell ─────────────────────────────────────────────────────────
 
 const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -63,6 +66,7 @@ const NotificationBell: React.FC = () => {
       const stored = localStorage.getItem("notif-read-ids");
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch {
+      // localStorage unavailable — silently ignore
       return new Set();
     }
   });
@@ -75,14 +79,33 @@ const NotificationBell: React.FC = () => {
   const [toasts, setToasts] = useState<Notif[]>([]);
   const [bellRect, setBellRect] = useState<DOMRect | null>(null);
 
+  // ── Refs ─────────────────────────────────────────────────────────────────
   const prevIds = useRef<Set<string>>(new Set());
   const initialised = useRef(false);
   const bellBtnRef = useRef<HTMLButtonElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const broadcastRef = useRef<BroadcastChannel | null>(null);
+
+  // Stable refs for values used inside WebSocket/BroadcastChannel callbacks
+  // This prevents socket reconnects when these values change
+  const soundOnRef = useRef(soundOn);
+  const readIdsRef = useRef(readIds);
+  const clearedIdsRef = useRef(clearedIds);
+
   const navigate = useNavigate();
   const isAdmin = getIsAdmin();
+
+  // ── Keep refs in sync with state ─────────────────────────────────────────
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
+  useEffect(() => {
+    readIdsRef.current = readIds;
+  }, [readIds]);
+  useEffect(() => {
+    clearedIdsRef.current = clearedIds;
+  }, [clearedIds]);
 
   // ── Persist read state ───────────────────────────────────────────────────
   useEffect(() => {
@@ -146,6 +169,7 @@ const NotificationBell: React.FC = () => {
   }, [refetch]);
 
   // ── WebSocket connection ─────────────────────────────────────────────────
+  // Uses refs for soundOn/readIds/clearedIds to avoid reconnecting on state change
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -164,8 +188,12 @@ const NotificationBell: React.FC = () => {
     });
 
     socket.on("notification:new", (notif: Notif) => {
-      // Skip if already read or cleared
-      if (readIds.has(notif.id) || clearedIds.has(notif.id)) return;
+      // Use refs — always current values without causing reconnects
+      if (
+        readIdsRef.current.has(notif.id) ||
+        clearedIdsRef.current.has(notif.id)
+      )
+        return;
 
       refetch();
 
@@ -173,11 +201,11 @@ const NotificationBell: React.FC = () => {
         setBellRect(bellBtnRef.current.getBoundingClientRect());
       setToasts((prev) => [notif, ...prev].slice(0, 3));
 
-      if (soundOn) chime();
+      if (soundOnRef.current) chime();
       broadcastRef.current?.postMessage(notif);
 
+      // Always show browser notification — visible on any tab/window
       if (
-        document.hidden &&
         typeof Notification !== "undefined" &&
         Notification.permission === "granted"
       ) {
@@ -196,9 +224,8 @@ const NotificationBell: React.FC = () => {
         };
       }
 
-      if (document.hidden) {
-        document.title = `(1) New — Abroad Scholars CRM`;
-      }
+      // Always update tab title
+      document.title = `(1) New — Abroad Scholars CRM`;
     });
 
     socket.on("connect_error", (err) => {
@@ -209,25 +236,30 @@ const NotificationBell: React.FC = () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [soundOn, readIds, clearedIds, refetch, navigate]);
+  }, [refetch, navigate]); // ← only stable deps — socket connects once and stays
 
   // ── Cross-tab notifications via BroadcastChannel ─────────────────────────
+  // Uses refs to avoid recreating channel on state change
   useEffect(() => {
     const channel = new BroadcastChannel("notif-channel");
     broadcastRef.current = channel;
 
     channel.onmessage = (e) => {
       const notif: Notif = e.data;
-      if (readIds.has(notif.id) || clearedIds.has(notif.id)) return;
+      if (
+        readIdsRef.current.has(notif.id) ||
+        clearedIdsRef.current.has(notif.id)
+      )
+        return;
       refetch();
       if (bellBtnRef.current)
         setBellRect(bellBtnRef.current.getBoundingClientRect());
       setToasts((prev) => [notif, ...prev].slice(0, 3));
-      if (soundOn) chime();
+      if (soundOnRef.current) chime();
     };
 
     return () => channel.close();
-  }, [soundOn, readIds, clearedIds]);
+  }, [refetch]); // ← stable dep only
 
   // ── Build notifs — filter out cleared ───────────────────────────────────
   const allNotifs = useMemo<Notif[]>(() => {
@@ -263,8 +295,8 @@ const NotificationBell: React.FC = () => {
       }, i * 350);
     });
 
+    // Browser notification for polling-detected new leads
     if (
-      document.hidden &&
       typeof Notification !== "undefined" &&
       Notification.permission === "granted"
     ) {
@@ -286,8 +318,7 @@ const NotificationBell: React.FC = () => {
     }
 
     const unread = allNotifs.filter((n) => !readIds.has(n.id)).length;
-    if (document.hidden && unread > 0)
-      document.title = `(${unread}) New — Abroad Scholars CRM`;
+    if (unread > 0) document.title = `(${unread}) New — Abroad Scholars CRM`;
   }, [allNotifs, soundOn, readIds, navigate]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -307,7 +338,6 @@ const NotificationBell: React.FC = () => {
   const clearAll = () => {
     const now = Date.now();
 
-    // Load existing cleared entries from storage
     let existing: ClearedEntry[] = [];
     try {
       const stored = localStorage.getItem("notif-cleared");
@@ -316,13 +346,11 @@ const NotificationBell: React.FC = () => {
       // localStorage unavailable — silently ignore
     }
 
-    // Create new entries with current timestamp
     const newEntries: ClearedEntry[] = allNotifs.map((n) => ({
       id: n.id,
       clearedAt: now,
     }));
 
-    // Merge — new entries override existing ones with same id
     const merged = [
       ...existing.filter((e) => !newEntries.find((ne) => ne.id === e.id)),
       ...newEntries,
@@ -330,8 +358,6 @@ const NotificationBell: React.FC = () => {
 
     saveClearedEntries(merged);
     setClearedIds(new Set(merged.map((e) => e.id)));
-
-    // Mark all as read too
     setReadIds(new Set(allNotifs.map((n) => n.id)));
     setFilter("all");
   };
