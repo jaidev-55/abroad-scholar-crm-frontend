@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
@@ -47,6 +47,7 @@ import { FiChevronDown } from "react-icons/fi";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentUser } from "../../api/auth";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
+import NotificationBell from "../../components/common/notifications/NotificationBell";
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -448,6 +449,7 @@ const AdminLayout = () => {
 
             {/* Right Section - Profile */}
             <div className="flex items-center shrink-0">
+              <NotificationBell />
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={() =>

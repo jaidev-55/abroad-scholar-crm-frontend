@@ -19,7 +19,7 @@ interface StatsData {
 }
 
 interface Props {
-  stats: StatsData | null; // ← accepts null while loading
+  stats: StatsData | null;
 }
 
 const StatsGrid: React.FC<Props> = ({ stats }) => {

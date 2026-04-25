@@ -29,6 +29,8 @@ export interface DashboardStatsResponse {
     followUpsDue: StatCard;
     converted: StatCard;
     lostLeads: StatCard;
+    academic: number;
+    admission: number;
   };
 }
 
@@ -209,5 +211,33 @@ export const getRecentLeads = async (
   return data;
 };
 
+export interface CallOutcomesQuery {
+  preset?: string;
+  from?: string;
+  to?: string;
+  counselorId?: string;
+  source?: string;
+}
 
+export interface CallOutcomesResponse {
+  period: { preset: string; from: string; to: string };
+  totalCalls: number;
+  positiveRate: number;
+  outcomeCounts: {
+    INTERESTED: number;
+    CONVERTED: number;
+    SCHEDULE_CALLBACK: number;
+    NOT_INTERESTED: number;
+    NO_ANSWER: number;
+    VOICEMAIL: number;
+  };
+}
 
+export const getCallOutcomes = async (
+  query: CallOutcomesQuery = {},
+): Promise<CallOutcomesResponse> => {
+  const { data } = await axiosInstance.get("/dashboard/call-outcomes", {
+    params: query,
+  });
+  return data;
+};

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { message, Spin } from "antd";
 import {
   PointerSensor,
@@ -36,6 +36,7 @@ import { todayString } from "../utils/dateUtils";
 import { apiLeadToLocal } from "../types/Transformlead";
 import CallModal from "../modals/call/CallModal";
 import { getIsAdmin } from "../../../utils/getStoredUser";
+import { useLocation } from "react-router-dom";
 
 const STAGE_TO_STATUS: Record<string, LeadStatus> = {
   new: "NEW",
@@ -240,12 +241,12 @@ const LeadsPipelinePage = () => {
     moveLeadMutation({ id: active.id as string, status: newStatus });
   };
 
-  const autoOpenDone = useRef(false);
+  const location = useLocation();
+
   useEffect(() => {
-    if (isLoading || autoOpenDone.current || leads.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
+    if (isLoading || leads.length === 0) return;
+    const params = new URLSearchParams(location.search);
     const leadId = params.get("leadId");
-    autoOpenDone.current = true;
     if (!leadId) return;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
@@ -254,7 +255,7 @@ const LeadsPipelinePage = () => {
       setViewDrawerLead(lead);
       window.history.replaceState({}, "", "/admin/leads-pipeline");
     }, 100);
-  }, [leads, isLoading]);
+  }, [leads, isLoading, location.search]);
 
   const handleAddNote = (leadId: string, text: string) => {
     if (notesDrawerLead?.id === leadId) {

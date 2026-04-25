@@ -22,10 +22,14 @@ import {
   getTopCounselors,
   getRecentLeads,
   type DatePreset,
+  type CallOutcomesQuery,
+  getCallOutcomes,
 } from "../api/dashboard";
 import type { LeadSource } from "../types/dashboard";
 import { exportDashboardPDF } from "../types/Exporttopdf";
 import { getIsAdmin } from "../../../utils/getStoredUser";
+import CategoryDistributionChart from "../components/CategoryDistributionChart";
+import CallOutcomeChart from "../components/Calloutcomechart";
 
 export interface DashboardFilterState {
   range: DateRange;
@@ -66,7 +70,6 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Read role from localStorage — set at login, no extra API call needed
   const isAdmin = getIsAdmin();
 
   const [filters, setFilters] = useState<DashboardFilterState>({
@@ -92,6 +95,8 @@ const Dashboard = () => {
     }),
     [filters],
   );
+
+  const callQuery: CallOutcomesQuery = queryParams;
 
   const baseKey = [
     queryParams.preset,
@@ -155,10 +160,21 @@ const Dashboard = () => {
     refetchIntervalInBackground: false,
   });
 
+  const { data: callOutcomes, isLoading: callLoading } = useQuery({
+    queryKey: ["call-outcomes", callQuery],
+    queryFn: () => getCallOutcomes(callQuery),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    enabled: isCustomReady,
+  });
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["call-outcomes"] });
       await queryClient.refetchQueries({
         queryKey: ["dashboard"],
         type: "active",
@@ -243,7 +259,7 @@ const Dashboard = () => {
       </div>
 
       <div
-        className={`mb-6 grid grid-cols-1 gap-4 ${isAdmin ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+        className={`mb-6 grid grid-cols-1 gap-4 ${isAdmin ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}
       >
         {isAdmin &&
           (sourcesQuery.isLoading ? (
@@ -251,11 +267,13 @@ const Dashboard = () => {
           ) : (
             <SourceBreakdownChart option={sourcesQuery.data} />
           ))}
+
         {pipelineQuery.isLoading ? (
           <SectionSkeleton />
         ) : (
           <PipelineFunnelChart option={pipelineQuery.data} />
         )}
+
         {counselorsQuery.isLoading ? (
           <SectionSkeleton />
         ) : (
@@ -263,6 +281,24 @@ const Dashboard = () => {
             counselors={counselorsQuery.data?.counselors ?? []}
           />
         )}
+
+        {/* ← Category Distribution — always visible for both roles */}
+        <CategoryDistributionChart
+          data={{
+            academic: statsQuery.data?.stats?.academic ?? 0,
+            admission: statsQuery.data?.stats?.admission ?? 0,
+            total:
+              (statsQuery.data?.stats?.academic ?? 0) +
+              (statsQuery.data?.stats?.admission ?? 0),
+          }}
+          isLoading={statsQuery.isLoading}
+        />
+
+        <CallOutcomeChart
+          data={callOutcomes?.outcomeCounts}
+          totalCalls={callOutcomes?.totalCalls}
+          isLoading={callLoading}
+        />
       </div>
 
       {/* Recent leads — source column hidden for counselors */}
