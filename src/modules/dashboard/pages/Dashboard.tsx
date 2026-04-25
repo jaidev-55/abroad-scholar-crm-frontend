@@ -153,7 +153,7 @@ const Dashboard = () => {
 
   const recentLeadsQuery = useQuery({
     queryKey: ["dashboard", "recent-leads", ...baseKey],
-    queryFn: () => getRecentLeads({ ...queryParams, limit: 100, offset: 0 }),
+    queryFn: () => getRecentLeads({ ...queryParams, limit: 10, offset: 0 }),
     enabled: isCustomReady,
     staleTime: 0,
     refetchInterval: 10_000,
@@ -214,7 +214,7 @@ const Dashboard = () => {
         isExporting={isExporting}
       />
 
-      {/* Filters — source dropdown hidden for counselors */}
+      {/* Filters */}
       <DashboardFilters
         range={filters.range}
         isAdmin={isAdmin}
@@ -249,8 +249,8 @@ const Dashboard = () => {
         <StatsGrid stats={statsQuery.data?.stats ?? null} />
       )}
 
-      {/* Trend chart */}
-      <div className="mb-6 grid grid-cols-1 gap-4">
+      {/* Trend chart — full width */}
+      <div className="mb-6">
         {trendQuery.isLoading ? (
           <SectionSkeleton height={320} />
         ) : (
@@ -258,9 +258,8 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div
-        className={`mb-6 grid grid-cols-1 gap-4 ${isAdmin ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}
-      >
+      {/* Row 1: Lead Sources + Pipeline Funnel */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {isAdmin &&
           (sourcesQuery.isLoading ? (
             <SectionSkeleton />
@@ -273,7 +272,10 @@ const Dashboard = () => {
         ) : (
           <PipelineFunnelChart option={pipelineQuery.data} />
         )}
+      </div>
 
+      {/* Row 2: Top Counselors + Category Distribution */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {counselorsQuery.isLoading ? (
           <SectionSkeleton />
         ) : (
@@ -282,7 +284,6 @@ const Dashboard = () => {
           />
         )}
 
-        {/* ← Category Distribution — always visible for both roles */}
         <CategoryDistributionChart
           data={{
             academic: statsQuery.data?.stats?.academic ?? 0,
@@ -293,7 +294,10 @@ const Dashboard = () => {
           }}
           isLoading={statsQuery.isLoading}
         />
+      </div>
 
+      {/* Row 3: Call Outcomes — full width */}
+      <div className="mb-6">
         <CallOutcomeChart
           data={callOutcomes?.outcomeCounts}
           totalCalls={callOutcomes?.totalCalls}
@@ -301,7 +305,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Recent leads — source column hidden for counselors */}
+      {/* Recent leads */}
       {recentLeadsQuery.isLoading ? (
         <SectionSkeleton height={360} />
       ) : (

@@ -41,8 +41,6 @@ interface OutcomeValue extends OutcomeConfig {
   count: number;
 }
 
-// ─── Outcome config ───────────────────────────────────────────────────────────
-
 const OUTCOMES: OutcomeConfig[] = [
   {
     key: "INTERESTED",
