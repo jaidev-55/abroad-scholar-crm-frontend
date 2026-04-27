@@ -111,7 +111,7 @@ const LoginRightPanel = () => {
           </h1>
           <p className="text-sm text-[#6b7898] leading-relaxed max-w-md">
             Everything you need to coach smarter, track faster and place more
-            students — built for the AbroadScolar team.
+            students — built for the AbroadScholar team.
           </p>
         </div>
 

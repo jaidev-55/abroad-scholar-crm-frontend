@@ -132,7 +132,7 @@ const OtpVerification = ({
         <div className="flex justify-center mb-6">
           <img
             src="/logo.webp"
-            alt="AbroadScolar Logo"
+            alt="AbroadScholar Logo"
             className="h-14 object-contain"
           />
         </div>

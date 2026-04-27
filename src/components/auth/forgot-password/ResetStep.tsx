@@ -30,7 +30,7 @@ const ResetStep = ({
         <div className="flex justify-center mb-6">
           <img
             src="/logo.webp"
-            alt="AbroadScolar"
+            alt="AbroadScholar"
             className="h-14 object-contain"
           />
         </div>

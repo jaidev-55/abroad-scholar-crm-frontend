@@ -729,7 +729,7 @@ const UsersPage = () => {
           <CustomInput
             name="email"
             label="Staff Email"
-            placeholder="newmember@abroadscolar.com"
+            placeholder="newmember@abroadscholar.com"
             control={addUserControl}
             size="large"
             type="email"

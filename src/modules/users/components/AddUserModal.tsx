@@ -96,7 +96,7 @@ const AddUserModal: React.FC<Props> = ({
         <CustomInput
           name="email"
           label="Staff Email"
-          placeholder="member@abroadscolar.com"
+          placeholder="member@abroadscholar.com"
           control={control}
           type="email"
           icon={<FiMail size={14} className="text-slate-400" />}

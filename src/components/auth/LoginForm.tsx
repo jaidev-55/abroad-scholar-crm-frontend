@@ -39,7 +39,7 @@ const LoginForm = ({ loading, onSubmit }: LoginFormProps) => {
         <div className="flex justify-center mb-6">
           <img
             src="/logo.webp"
-            alt="AbroadScolar Logo"
+            alt="AbroadScholar Logo"
             className="h-14 object-contain"
           />
         </div>
@@ -71,7 +71,7 @@ const LoginForm = ({ loading, onSubmit }: LoginFormProps) => {
         <CustomInput
           name="email"
           label="Staff Email"
-          placeholder="you@abroadscolar.com"
+          placeholder="you@abroadscholar.com"
           control={control}
           size="large"
           type="email"

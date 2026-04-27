@@ -29,7 +29,7 @@ const EmailStep = ({ loading, onSubmit }: EmailStepProps) => {
         <div className="flex justify-center mb-6">
           <img
             src="/logo.webp"
-            alt="AbroadScolar"
+            alt="AbroadScholar"
             className="h-14 object-contain"
           />
         </div>
@@ -74,7 +74,7 @@ const EmailStep = ({ loading, onSubmit }: EmailStepProps) => {
         <CustomInput
           name="email"
           label="Staff Email"
-          placeholder="you@abroadscolar.com"
+          placeholder="you@abroadscholar.com"
           control={control}
           size="large"
           type="email"

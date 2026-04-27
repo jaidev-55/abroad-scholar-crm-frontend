@@ -102,7 +102,7 @@ const RegisterForm = ({ loading, onSubmit }: RegisterFormProps) => {
         <div className="flex justify-center mb-6">
           <img
             src="/logo.webp"
-            alt="AbroadScolar Logo"
+            alt="AbroadScholar Logo"
             className="h-14 object-contain"
           />
         </div>
@@ -118,7 +118,7 @@ const RegisterForm = ({ loading, onSubmit }: RegisterFormProps) => {
           Join the team! 🚀
         </h2>
         <p className="text-sm text-[#8a95b0]">
-          Create your staff account to access the AbroadScolar portal.
+          Create your staff account to access the AbroadScholar portal.
         </p>
       </div>
 
@@ -150,7 +150,7 @@ const RegisterForm = ({ loading, onSubmit }: RegisterFormProps) => {
         <CustomInput
           name="email"
           label="Staff Email"
-          placeholder="you@abroadscolar.com"
+          placeholder="you@abroadscholar.com"
           control={control}
           size="large"
           type="email"

@@ -29,7 +29,7 @@ const SECURITY_FEATURES = [
     cardBg: "bg-emerald-50",
     cardBorder: "border-emerald-100",
     title: "Sent only to verified staff email",
-    desc: "Reset codes are delivered only to the email registered by your AbroadScolar admin.",
+    desc: "Reset codes are delivered only to the email registered by your AbroadScholar admin.",
   },
   {
     icon: <MdLockReset size={20} className="text-amber-500" />,
@@ -141,7 +141,7 @@ const ForgotPasswordRightPanel = () => {
         {/* Footer note */}
         <div className="flex w-full text-center gap-2 mt-8 text-[11px] text-[#8a95b0]">
           <HiOutlineShieldCheck size={13} />© {new Date().getFullYear()}{" "}
-          AbroadScolar Internal Portal — Confidential • Developed by Jai
+          AbroadScholar Internal Portal — Confidential • Developed by Jai
         </div>
       </div>
     </div>
