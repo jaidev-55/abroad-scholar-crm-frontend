@@ -6,7 +6,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "COUNSELLOR";
+  role: "ADMIN" | "COUNSELOR";
 }
 
 export interface VerifyOtpPayload {

@@ -15,11 +15,9 @@ import { getIsAdmin } from "../../../utils/getStoredUser";
 import type { Notif } from "./types";
 import { getNotifications } from "../../../modules/dashboard/api/notifications";
 import { chime, unlockAudio } from "./audio";
-import { DEMO_NOTIFICATIONS, TYPE_CFG } from "./constants";
+import { TYPE_CFG } from "./constants";
 import ToastCard from "./ToastCard";
 import NotificationDropdown from "./NotificationDropdown";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ClearedEntry {
   id: string;
@@ -27,23 +25,6 @@ interface ClearedEntry {
 }
 
 const CLEAR_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
-
-// ─── localStorage helpers ─────────────────────────────────────────────────────
-
-const loadClearedIds = (): Set<string> => {
-  try {
-    const stored = localStorage.getItem("notif-cleared");
-    if (!stored) return new Set();
-    const entries: ClearedEntry[] = JSON.parse(stored);
-    const now = Date.now();
-    const valid = entries.filter((e) => now - e.clearedAt < CLEAR_TTL);
-    localStorage.setItem("notif-cleared", JSON.stringify(valid));
-    return new Set(valid.map((e) => e.id));
-  } catch {
-    // localStorage unavailable — silently ignore
-    return new Set();
-  }
-};
 
 const saveClearedEntries = (entries: ClearedEntry[]) => {
   try {
@@ -63,16 +44,36 @@ const NotificationBell: React.FC = () => {
   // Read state — persists indefinitely
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     try {
+      const demoIds = ["d1", "d2", "d3", "d4", "d5"];
       const stored = localStorage.getItem("notif-read-ids");
-      return stored ? new Set(JSON.parse(stored)) : new Set();
+      if (!stored) return new Set();
+      const ids: string[] = JSON.parse(stored);
+      const cleaned = ids.filter((id) => !demoIds.includes(id));
+      // Save cleaned back
+      localStorage.setItem("notif-read-ids", JSON.stringify(cleaned));
+      return new Set(cleaned);
     } catch {
-      // localStorage unavailable — silently ignore
       return new Set();
     }
   });
 
   // Cleared state — auto-expires after 24hrs
-  const [clearedIds, setClearedIds] = useState<Set<string>>(loadClearedIds);
+  const [clearedIds, setClearedIds] = useState<Set<string>>(() => {
+    try {
+      const demoIds = ["d1", "d2", "d3", "d4", "d5"];
+      const stored = localStorage.getItem("notif-cleared");
+      if (!stored) return new Set();
+      const entries: ClearedEntry[] = JSON.parse(stored);
+      const now = Date.now();
+      const valid = entries
+        .filter((e) => now - e.clearedAt < CLEAR_TTL)
+        .filter((e) => !demoIds.includes(e.id)); // ← remove demo IDs
+      localStorage.setItem("notif-cleared", JSON.stringify(valid));
+      return new Set(valid.map((e) => e.id));
+    } catch {
+      return new Set();
+    }
+  });
 
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [soundOn, setSoundOn] = useState(true);
@@ -263,10 +264,9 @@ const NotificationBell: React.FC = () => {
 
   // ── Build notifs — filter out cleared ───────────────────────────────────
   const allNotifs = useMemo<Notif[]>(() => {
-    const base = allNotifsRaw.length > 0 ? allNotifsRaw : DEMO_NOTIFICATIONS;
-    return base
+    return allNotifsRaw
       .map((n) => ({ ...n, read: readIds.has(n.id) }))
-      .filter((n) => !clearedIds.has(n.id)) // hide cleared for 24hrs
+      .filter((n) => !clearedIds.has(n.id))
       .slice(0, 20);
   }, [allNotifsRaw, readIds, clearedIds]);
 

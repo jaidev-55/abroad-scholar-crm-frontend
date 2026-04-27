@@ -36,10 +36,10 @@ const ROLE_OPTIONS = [
     ),
   },
   {
-    value: "COUNSELLOR",
+    value: "COUNSELOR",
     label: (
       <span className="flex items-center gap-2">
-        <FiUser /> Counsellor
+        <FiUser /> Counselor
       </span>
     ),
   },

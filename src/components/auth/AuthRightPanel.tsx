@@ -92,7 +92,7 @@ const AuthRightPanel = ({ step }: AuthRightPanelProps) => {
 
         <h1 className="text-3xl xl:text-4xl font-extrabold text-[#1a2540] leading-tight mb-4">
           Start your journey <br />
-          <span className="text-blue-500">with AbroadScolar.</span>
+          <span className="text-blue-500">with AbroadScholar.</span>
         </h1>
 
         <p className="text-sm text-[#6b7898] leading-relaxed mb-8">
