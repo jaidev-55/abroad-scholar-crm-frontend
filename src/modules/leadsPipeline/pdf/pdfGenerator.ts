@@ -5,7 +5,7 @@ interface ExportableLead {
   name: string;
   phone: string;
   email: string;
-  country: string;
+  country?: string;
   source: string;
   status: string;
   priority: string;

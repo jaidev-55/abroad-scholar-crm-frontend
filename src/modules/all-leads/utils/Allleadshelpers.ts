@@ -1,4 +1,3 @@
-
 import type { Lead } from "../../../types/lead";
 import type { ApiLead } from "../../leadsPipeline/api/leads";
 
@@ -21,7 +20,7 @@ export const apiLeadToLocal = (a: ApiLead): Lead => ({
   name: a.fullName,
   phone: a.phone,
   email: a.email ?? "",
-  country: a.country,
+  country: a.country ?? "",
   source: a.source,
   status: a.status,
   stage: ({

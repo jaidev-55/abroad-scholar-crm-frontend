@@ -10,7 +10,7 @@ export interface CreateLeadPayload {
   fullName: string;
   phone: string;
   email?: string;
-  country: string;
+  country?: string;
   source: string;
   status: string;
   priority: string;
@@ -34,7 +34,7 @@ export interface CreateLeadResponse {
   ieltsScore?: number;
   followUpDate?: string;
   createdAt: string;
-  category?: LeadCategory | null; // ← new
+  category?: LeadCategory | null;
 }
 
 export const createLead = async (
@@ -96,7 +96,7 @@ export interface ApiLead {
   fullName: string;
   phone: string;
   email?: string;
-  country: string;
+  country?: string;
   source: string;
   status: LeadStatus;
   priority: LeadPriority;

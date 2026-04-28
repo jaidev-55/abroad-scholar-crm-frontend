@@ -1,6 +1,5 @@
 import type { Dayjs } from "dayjs";
 
-// ─── API raw shapes ───────────────────────────────────────────────────────────
 export type LeadStatus = "NEW" | "IN_PROGRESS" | "CONVERTED" | "LOST";
 export type LeadPriorityRaw =
   | "HIGH"
@@ -10,7 +9,7 @@ export type LeadPriorityRaw =
   | "WARM"
   | "COLD";
 export type LeadStage = "new" | "progress" | "applied" | "converted" | "lost";
-export type LeadCategory = "ACADEMIC" | "ADMISSION"; // ← new
+export type LeadCategory = "ACADEMIC" | "ADMISSION";
 
 // Single consistent priority type — transformLead always produces Hot/Warm/Cold
 export type LeadPriority = "Hot" | "Warm" | "Cold";
@@ -31,7 +30,7 @@ export interface ApiLead {
   fullName: string;
   phone: string;
   email?: string;
-  country: string;
+  country?: string;
   source: string;
   status: LeadStatus;
   priority: LeadPriorityRaw;
@@ -41,7 +40,7 @@ export interface ApiLead {
   notes?: ApiNote[];
   createdAt: string;
   updatedAt: string;
-  category?: LeadCategory | null; // ← new
+  category?: LeadCategory | null;
 }
 
 // ─── Local app shape ──────────────────────────────────────────────────────────
@@ -57,7 +56,7 @@ export interface Lead {
   name: string;
   phone: string;
   email: string;
-  country: string;
+  country?: string;
   source: string;
   status: LeadStatus;
   stage: LeadStage;

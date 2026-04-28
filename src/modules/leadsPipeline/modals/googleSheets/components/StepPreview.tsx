@@ -1,246 +1,185 @@
-import React from "react";
+// components/googleSheets/components/StepPreview.tsx
+// Shows valid leads in tab 1, and rows with validation ERRORS (not skipped) in tab 2
+
+import React, { useState } from "react";
 import {
   RiCheckboxCircleLine,
   RiErrorWarningLine,
-  RiAlertLine,
   RiInformationLine,
 } from "react-icons/ri";
 import type { ImportedRow } from "../../../utils/types";
 
-interface Props {
+interface StepPreviewProps {
+  // Pass ALL rows (skipped ones already filtered out by the modal)
   previewRows: ImportedRow[];
+  // Legacy props kept for compatibility — no longer used internally
   showSkipped: boolean;
   onToggleSkipped: (v: boolean) => void;
 }
 
-const StepPreview: React.FC<Props> = ({
-  previewRows,
-  showSkipped,
-  onToggleSkipped,
-}) => {
-  const validRows = previewRows.filter((r) => r.valid);
-  const invalidRows = previewRows.filter((r) => !r.valid);
-  const activeRows = showSkipped ? invalidRows : validRows;
+const StepPreview: React.FC<StepPreviewProps> = ({ previewRows }) => {
+  const [activeTab, setActiveTab] = useState<"valid" | "errors">("valid");
 
-  const skipReasonMap = invalidRows.reduce<Record<string, number>>(
-    (acc, row) => {
-      row.errors.forEach((e) => {
-        acc[e] = (acc[e] ?? 0) + 1;
-      });
-      return acc;
-    },
-    {},
-  );
+  const validRows = previewRows.filter((r) => r.valid && !r.skipReason);
+  const errorRows = previewRows.filter((r) => !r.valid && !r.skipReason);
 
   return (
     <div className="space-y-3">
-      {/* Tab switcher */}
-      <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl">
+      {/* ── Tab switcher ───────────────────────────────────────────────── */}
+      <div className="flex rounded-xl overflow-hidden border border-slate-200 text-sm font-semibold">
         <button
-          onClick={() => onToggleSkipped(false)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            !showSkipped
-              ? "bg-white text-green-700 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+          onClick={() => setActiveTab("valid")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors cursor-pointer ${
+            activeTab === "valid"
+              ? "bg-green-600 text-white"
+              : "bg-white text-slate-500 hover:bg-slate-50"
           }`}
         >
-          <RiCheckboxCircleLine
-            size={13}
-            className={!showSkipped ? "text-green-600" : "text-slate-400"}
-          />
+          <RiCheckboxCircleLine size={15} />
           {validRows.length} Ready to Import
         </button>
-        {invalidRows.length > 0 && (
-          <button
-            onClick={() => onToggleSkipped(true)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              showSkipped
-                ? "bg-white text-red-700 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <RiErrorWarningLine
-              size={13}
-              className={showSkipped ? "text-red-500" : "text-slate-400"}
-            />
-            {invalidRows.length} Skipped — Why?
-          </button>
-        )}
+        <button
+          onClick={() => setActiveTab("errors")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 transition-colors cursor-pointer ${
+            activeTab === "errors"
+              ? "bg-red-500 text-white"
+              : "bg-white text-slate-500 hover:bg-slate-50"
+          }`}
+        >
+          <RiErrorWarningLine size={15} />
+          {errorRows.length} Skipped — Why?
+        </button>
       </div>
 
-      {/* Skip reason breakdown */}
-      {showSkipped && invalidRows.length > 0 && (
-        <div className="rounded-xl border border-red-200 overflow-hidden">
-          <div className="bg-red-50 px-3.5 py-2.5 border-b border-red-200">
-            <p className="text-[11px] font-bold text-red-800 uppercase tracking-wider flex items-center gap-1.5">
-              <RiAlertLine size={12} /> Reasons these {invalidRows.length} rows
-              were skipped
-            </p>
-          </div>
-          <div className="divide-y divide-red-100">
-            {Object.entries(skipReasonMap).map(([reason, count]) => {
-              const exampleRows = invalidRows
-                .filter((r) => r.errors.includes(reason))
-                .slice(0, 2);
-              return (
-                <div key={reason} className="px-3.5 py-3 bg-white">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[12px] font-bold text-red-700 flex items-center gap-1.5">
-                      <RiErrorWarningLine
-                        size={13}
-                        className="text-red-500 shrink-0"
-                      />
-                      {reason}
-                    </span>
-                    <span className="text-[11px] font-black text-red-600 bg-red-100 border border-red-200 px-2.5 py-0.5 rounded-full">
-                      {count} row{count > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="pl-5 space-y-1">
-                    {exampleRows.map((row) => (
-                      <div
-                        key={row.rowIndex}
-                        className="flex items-center gap-2 text-[11px] text-slate-500"
-                      >
-                        <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0">
-                          row {row.rowIndex}
+      {/* ── Valid rows ─────────────────────────────────────────────────── */}
+      {activeTab === "valid" && (
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {validRows.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">
+              No valid rows found
+            </div>
+          ) : (
+            validRows.map((row) => (
+              <div
+                key={row.rowIndex}
+                className="flex items-center justify-between px-3.5 py-3 bg-green-50/60 border border-green-100 rounded-xl"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <RiCheckboxCircleLine
+                    size={15}
+                    className="text-green-500 shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {row.mapped.fullName}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      {row.mapped.source && (
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">
+                          {row.mapped.source}
                         </span>
-                        <span className="truncate text-slate-600">
-                          {reason.toLowerCase().includes("name")
-                            ? Object.values(row.raw)[0]
-                              ? `"${Object.values(row.raw)[0]}"`
-                              : "— empty cell"
-                            : reason.toLowerCase().includes("phone")
-                              ? row.raw[
-                                  Object.keys(row.raw).find(
-                                    (k) =>
-                                      k.toLowerCase().includes("phone") ||
-                                      k.toLowerCase().includes("mobile"),
-                                  ) ?? ""
-                                ] || "— empty cell"
-                              : `${Object.values(row.raw).filter(Boolean).slice(0, 2).join(", ") || "— empty row"}`}
+                      )}
+                      {row.mapped.priority && (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                            row.mapped.priority === "HOT"
+                              ? "bg-red-50 text-red-500"
+                              : row.mapped.priority === "WARM"
+                                ? "bg-amber-50 text-amber-500"
+                                : "bg-blue-50 text-blue-500"
+                          }`}
+                        >
+                          {row.mapped.priority}
                         </span>
-                      </div>
-                    ))}
-                    {count > 2 && (
-                      <p className="text-[10px] text-red-400 pl-0.5">
-                        + {count - 2} more row{count - 2 > 1 ? "s" : ""} with
-                        this issue
-                      </p>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-          <div className="bg-amber-50 border-t border-amber-200 px-3.5 py-2.5">
-            <p className="text-[11px] text-amber-700 font-medium flex items-start gap-1.5">
-              <RiInformationLine
-                size={13}
-                className="text-amber-500 shrink-0 mt-0.5"
-              />
-              <span>
-                To fix: go <strong>Back → Map Columns</strong> and ensure
-                required fields are correctly mapped.
-              </span>
-            </p>
-          </div>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-xs font-mono text-slate-600">
+                    {row.mapped.phone}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    row {row.rowIndex}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {/* Row list */}
-      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-        {activeRows.slice(0, 10).map((row) => (
-          <div
-            key={row.rowIndex}
-            className={`p-3 rounded-xl border ${
-              row.valid
-                ? "border-green-100 bg-gradient-to-r from-green-50/60 to-emerald-50/30"
-                : "border-red-100 bg-red-50/40"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2 min-w-0">
-                {row.valid ? (
-                  <RiCheckboxCircleLine
-                    size={13}
-                    className="text-green-500 shrink-0"
-                  />
-                ) : (
-                  <RiErrorWarningLine
-                    size={13}
-                    className="text-red-500 shrink-0"
-                  />
-                )}
-                <span className="text-[12px] font-bold text-slate-800 truncate">
-                  {row.mapped.fullName ?? (
-                    <em className="text-red-400 font-normal text-[11px]">
-                      No name — row {row.rowIndex}
-                    </em>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 ml-2">
-                <span className="text-[10px] text-slate-400 font-mono">
-                  row {row.rowIndex}
-                </span>
-                {row.mapped.phone && (
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    {row.mapped.phone}
-                  </span>
-                )}
-              </div>
+      {/* ── Error rows ─────────────────────────────────────────────────── */}
+      {activeTab === "errors" && (
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          {errorRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
+              <RiCheckboxCircleLine size={28} className="text-green-400" />
+              <p className="text-sm font-medium">No validation errors!</p>
+              <p className="text-xs">All non-skipped rows passed validation.</p>
             </div>
-            <div className="flex flex-wrap gap-1 pl-5">
-              {row.mapped.country && (
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
-                  {row.mapped.country}
+          ) : (
+            <>
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+                <RiInformationLine size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  These rows have missing or invalid required fields and will
+                  not be imported. Fix them in the sheet and re-import.
                 </span>
-              )}
-              {row.mapped.source && (
-                <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium border border-blue-100">
-                  {row.mapped.source}
-                </span>
-              )}
-              {row.mapped.priority && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${
-                    row.mapped.priority === "HOT"
-                      ? "bg-red-50 text-red-600 border-red-100"
-                      : row.mapped.priority === "WARM"
-                        ? "bg-amber-50 text-amber-600 border-amber-100"
-                        : "bg-blue-50 text-blue-600 border-blue-100"
-                  }`}
+              </div>
+              {errorRows.map((row) => (
+                <div
+                  key={row.rowIndex}
+                  className="px-3.5 py-3 bg-red-50/60 border border-red-100 rounded-xl"
                 >
-                  {row.mapped.priority}
-                </span>
-              )}
-              {row.errors.map((err, i) => (
-                <span
-                  key={i}
-                  className="text-[10px] text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5"
-                >
-                  <RiErrorWarningLine size={9} />
-                  {err}
-                </span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <RiErrorWarningLine
+                        size={14}
+                        className="text-red-500 shrink-0"
+                      />
+                      <p className="text-sm font-semibold text-slate-700">
+                        {row.mapped.fullName ?? (
+                          <span className="italic text-slate-400">No name</span>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      row {row.rowIndex}
+                    </span>
+                  </div>
+                  {/* Show each validation error */}
+                  <ul className="space-y-1 pl-5">
+                    {row.errors.map((err, i) => (
+                      <li
+                        key={i}
+                        className="text-xs text-red-600 flex items-center gap-1.5"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                        {err}
+                      </li>
+                    ))}
+                  </ul>
+                  {/* Raw values for debugging */}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {Object.entries(row.raw)
+                      .filter(([, v]) => v)
+                      .slice(0, 4)
+                      .map(([k, v]) => (
+                        <span
+                          key={k}
+                          className="text-[10px] bg-white border border-red-100 text-slate-500 px-1.5 py-0.5 rounded"
+                        >
+                          {k}: {v.slice(0, 20)}
+                        </span>
+                      ))}
+                  </div>
+                </div>
               ))}
-            </div>
-          </div>
-        ))}
-        {activeRows.length > 10 && (
-          <div className="text-center py-2">
-            <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">
-              + {activeRows.length - 10} more{" "}
-              {showSkipped ? "skipped" : "valid"} rows
-            </span>
-          </div>
-        )}
-        {activeRows.length === 0 && (
-          <div className="text-center py-8 text-slate-400 text-sm">
-            {showSkipped ? "No skipped rows 🎉" : "No valid rows found"}
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -28,7 +28,7 @@ export interface Lead {
   id: string;
   name: string;
   phone: string;
-  country: string;
+  country?: string;
   counselor: string;
 }
 

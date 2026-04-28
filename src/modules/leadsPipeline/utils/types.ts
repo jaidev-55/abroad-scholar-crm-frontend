@@ -1,3 +1,4 @@
+import type { LeadCategory } from "../api/leads";
 export interface SheetUrlForm {
   sheetUrl: string;
 }
@@ -16,9 +17,11 @@ export interface ImportedRow {
     followUpDate?: string;
     ieltsScore?: string;
     notes?: string;
+    leadCategory?: LeadCategory;
   };
   errors: string[];
   valid: boolean;
+  skipReason?: string;
 }
 
 export interface ImportResult {
