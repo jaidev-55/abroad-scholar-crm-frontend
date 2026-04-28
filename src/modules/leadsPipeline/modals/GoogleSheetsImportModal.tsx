@@ -299,7 +299,7 @@ const GoogleSheetsImportModal: React.FC<Props> = ({
       width={560}
       styles={{
         body: {
-          maxHeight: "70vh",
+          maxHeight: "60vh",
           overflowY: "auto",
           overflowX: "hidden",
           paddingRight: "4px",
