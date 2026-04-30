@@ -66,6 +66,8 @@ const LeadsPipelinePage = () => {
   const [editDrawerLead, setEditDrawerLead] = useState<Lead | null>(null);
   const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
   const [emailModalLead, setEmailModalLead] = useState<Lead | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewDrawerInitialTab, setViewDrawerInitialTab] = useState<
     "notes" | "details" | "activity"
   >("notes");
@@ -92,6 +94,7 @@ const LeadsPipelinePage = () => {
     data: rawLeads = [],
     isLoading,
     isError,
+    refetch,
   } = useQuery({
     queryKey,
     queryFn: () =>
@@ -104,6 +107,7 @@ const LeadsPipelinePage = () => {
         followUpTo: dateRange?.[1]?.format("YYYY-MM-DD"),
       }),
     placeholderData: (prev) => prev,
+    refetchInterval: 30_000,
   });
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
@@ -206,6 +210,12 @@ const LeadsPipelinePage = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     setActiveId(null);
@@ -240,8 +250,6 @@ const LeadsPipelinePage = () => {
     );
     moveLeadMutation({ id: active.id as string, status: newStatus });
   };
-
-  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     if (isLoading || leads.length === 0) return;
@@ -283,7 +291,7 @@ const LeadsPipelinePage = () => {
     setAddModalDefaultStage(undefined);
   };
 
-  // ← categoryFilter added
+  // categoryFilter added
   const clearFilters = () => {
     setSearch("");
     setSourceFilter("");
@@ -294,7 +302,7 @@ const LeadsPipelinePage = () => {
     setDateRange(null);
   };
 
-  // ← categoryFilter added
+  // categoryFilter added
   const hasFilters = !!(
     search ||
     sourceFilter ||
@@ -332,12 +340,24 @@ const LeadsPipelinePage = () => {
 
   return (
     <>
+      {isRefreshing && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <Spin size="large" />
+            <p className="text-sm font-semibold text-slate-600">
+              Refreshing leads...
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-4 p-3 w-full overflow-hidden">
         <PipelineHeader
           onAddLead={() => {
             setAddModalDefaultStage(undefined);
             setAddModalOpen(true);
           }}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
           onImport={() => setImportModalOpen(true)}
         />
 

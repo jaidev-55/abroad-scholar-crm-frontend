@@ -1,14 +1,18 @@
 import React from "react";
-import { RiAddLine, RiUploadCloud2Line } from "react-icons/ri";
+import { RiAddLine, RiRefreshLine, RiUploadCloud2Line } from "react-icons/ri";
 
 interface PipelineHeaderProps {
   onAddLead: () => void;
   onImport?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 const PipelineHeader: React.FC<PipelineHeaderProps> = ({
   onAddLead,
   onImport,
+  onRefresh,
+  isRefreshing,
 }) => {
   return (
     <div className="flex items-start justify-between">
@@ -20,6 +24,19 @@ const PipelineHeader: React.FC<PipelineHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RiRefreshLine
+              size={16}
+              className={isRefreshing ? "animate-spin" : ""}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        )}
         {/* Import button */}
         {onImport && (
           <button
