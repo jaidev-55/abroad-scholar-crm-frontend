@@ -141,7 +141,7 @@ const ForgotPasswordRightPanel = () => {
         {/* Footer note */}
         <div className="flex w-full text-center gap-2 mt-8 text-[11px] text-[#8a95b0]">
           <HiOutlineShieldCheck size={13} />© {new Date().getFullYear()}{" "}
-          AbroadScholar Internal Portal — Confidential • Developed by Jai
+          AbroadScholar Internal Portal — Confidential
         </div>
       </div>
     </div>
