@@ -66,6 +66,7 @@ const COUNTRY_OPTIONS = [
   { value: "🇩🇪 Germany", label: "🇩🇪 Germany" },
   { value: "🇮🇪 Ireland", label: "🇮🇪 Ireland" },
   { value: "🇳🇿 New Zealand", label: "🇳🇿 New Zealand" },
+  { value: "Others", label: "Others" },
 ];
 
 const COUNSELOR_OPTIONS = [

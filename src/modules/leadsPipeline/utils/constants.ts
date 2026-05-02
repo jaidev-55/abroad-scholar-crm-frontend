@@ -35,6 +35,7 @@ export const COUNTRIES = [
   "🇩🇪 Germany",
   "🇮🇪 Ireland",
   "🇳🇿 New Zealand",
+  "Others",
 ];
 
 // PRIORITY LEVELS

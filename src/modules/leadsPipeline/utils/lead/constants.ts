@@ -21,6 +21,7 @@ export const COUNTRY_OPTIONS = [
   { value: "New Zealand", label: "🇳🇿 New Zealand" },
   { value: "Singapore", label: "🇸🇬 Singapore" },
   { value: "Japan", label: "🇯🇵 Japan" },
+  { value: "Others", label: "Others" },
 ];
 
 export const STAGES = [
