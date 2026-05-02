@@ -560,8 +560,6 @@ const AdminLayout = () => {
             © {new Date().getFullYear()} Abroad Scholars CRM
             <span className="mx-1">|</span>
             All Rights Reserved
-            <span className="mx-1">|</span>
-            Built by Jai
           </div>
         </main>
       </div>

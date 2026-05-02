@@ -74,7 +74,7 @@ const ForgotPasswordPage = () => {
           <div className="mt-7 pt-5 border-t border-[#f0f3fa]">
             <p className="text-center text-[11px] text-gray-500">
               © {new Date().getFullYear()} AbroadScholar Internal Portal —
-              Confidential • Developed by Jai
+              Confidential 
             </p>
           </div>
         </div>
