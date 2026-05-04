@@ -48,7 +48,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
   });
 
   const counselorOptions = counselorUsers.map((u) => ({
-    value: u.name,
+    value: u.id,
     label: (
       <div className="flex items-center gap-2">
         <div
@@ -124,6 +124,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
         priority: PRIORITY_TO_API[
           data.priority
         ] as UpdateLeadPayload["priority"],
+        counselorId: data.counselor || undefined,
         followUpDate: data.followUp
           ? data.followUp.format("YYYY-MM-DD")
           : undefined,

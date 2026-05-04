@@ -313,9 +313,7 @@ const LeadModal: React.FC<Props> = ({
     const pendingNote = newNote.trim();
     if (pendingNote) currentNotes.push(pendingNote);
 
-    const selectedCounselor = counselorUsers.find(
-      (u) => u.name === data.counselor,
-    );
+    const selectedCounselorId = data.counselor || undefined;
 
     mutate(
       {
@@ -326,8 +324,8 @@ const LeadModal: React.FC<Props> = ({
         source: data.source,
         status: stageCfg.apiStatus,
         priority: priorityCfg.apiValue,
-        assignmentType: selectedCounselor ? "MANUAL" : "AUTO",
-        counselorId: selectedCounselor?.id || undefined,
+        assignmentType: selectedCounselorId ? "MANUAL" : "AUTO",
+        counselorId: selectedCounselorId,
         ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
         followUpDate,
         notes: currentNotes.length > 0 ? currentNotes : undefined,
