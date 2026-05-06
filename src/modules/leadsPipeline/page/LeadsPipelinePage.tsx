@@ -106,8 +106,10 @@ const LeadsPipelinePage = () => {
         followUpFrom: dateRange?.[0]?.format("YYYY-MM-DD"),
         followUpTo: dateRange?.[1]?.format("YYYY-MM-DD"),
       }),
-    placeholderData: (prev) => prev,
+
     refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);

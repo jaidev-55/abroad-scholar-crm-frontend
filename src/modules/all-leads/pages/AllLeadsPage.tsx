@@ -105,6 +105,7 @@ const AllLeadsPage: React.FC = () => {
     onSuccess: () => {
       message.success("Lead deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.refetchQueries({ queryKey: ["leads"] });
       setDeleteModal({ open: false, mode: "single" });
       if (detailLead?.id === deleteModal.id) setDetailLead(null);
     },
@@ -116,6 +117,7 @@ const AllLeadsPage: React.FC = () => {
     onSuccess: (_, ids) => {
       message.success(`${ids.length} lead${ids.length > 1 ? "s" : ""} deleted`);
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.refetchQueries({ queryKey: ["leads"] });
       setSelected([]);
       setDeleteModal({ open: false, mode: "bulk" });
     },
@@ -125,7 +127,6 @@ const AllLeadsPage: React.FC = () => {
   const isDeleting =
     singleDeleteMutation.isPending || bulkDeleteMutation.isPending;
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSingleDeleteClick = useCallback(
     (id: string, name: string, e?: React.MouseEvent) => {
       e?.stopPropagation();
