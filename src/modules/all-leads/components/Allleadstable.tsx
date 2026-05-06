@@ -350,7 +350,7 @@ const AllLeadsTable: React.FC<Props> = ({
     : baseColumns.filter((col) => (col as { key?: string }).key !== "source");
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm relative">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
       {isError && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <RiCloseCircleLine size={32} className="text-red-300" />
@@ -377,7 +377,7 @@ const AllLeadsTable: React.FC<Props> = ({
           columns={columns}
           rowKey="id"
           className="[&_.ant-table-container]:!rounded-none [&_.ant-table-body]:!overflow-x-auto"
-          scroll={{ x: "max-content", y: 560 }}
+          scroll={{ x: true, y: 560 }}
           size="small"
           loading={{
             spinning: isLoading,
