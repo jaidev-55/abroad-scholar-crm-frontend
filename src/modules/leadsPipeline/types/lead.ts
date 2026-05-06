@@ -34,6 +34,7 @@ export interface ApiLead {
   source: string;
   status: LeadStatus;
   priority: LeadPriorityRaw;
+  counselorId?: string;
   counselor?: ApiCounselor;
   followUpDate?: string;
   ieltsScore?: number;
@@ -61,6 +62,7 @@ export interface Lead {
   status: LeadStatus;
   stage: LeadStage;
   priority: LeadPriority;
+  counselorId: string;
   counselor: string;
   followUp: string;
   ieltsScore?: string;

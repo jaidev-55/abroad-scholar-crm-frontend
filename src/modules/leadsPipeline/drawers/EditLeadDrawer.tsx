@@ -85,7 +85,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
     },
   });
 
-  // ── Form — syncs values whenever `lead` changes ───────────────────────────
   const methods = useForm<EditFormValues>({
     values: lead
       ? {
@@ -94,8 +93,8 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
           email: lead.email,
           stage: lead.stage,
           source: lead.source,
-          counselor: lead.counselor,
-          country: lead.country,
+          counselor: lead.counselorId ?? "",
+          country: lead.country ?? "",
           priority: lead.priority as EditFormValues["priority"],
           followUp: lead.followUp ? dayjs(lead.followUp) : null,
           ieltsScore: lead.ieltsScore || "",
