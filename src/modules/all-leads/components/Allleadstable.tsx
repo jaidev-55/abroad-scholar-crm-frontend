@@ -225,16 +225,18 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
       key: "counselor",
-      width: 130,
+      width: 150,
       align: "center",
       render: (_: unknown, rec: ApiLead) => {
         const name = rec.counselor?.name;
         return !name ? (
-          <span className="text-[11px] text-slate-300">Unassigned</span>
+          <span className="text-[11px] text-slate-300">—</span>
         ) : (
-          <div className="flex items-center justify-center gap-1.5">
-            <Avatar name={name} size={22} />
-            <span className="text-xs text-slate-600">{name.split(" ")[0]}</span>
+          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <Avatar name={name} size={20} />
+            <span className="text-xs text-slate-600 truncate max-w-[70px]">
+              {name.split(" ")[0]}
+            </span>
           </div>
         );
       },

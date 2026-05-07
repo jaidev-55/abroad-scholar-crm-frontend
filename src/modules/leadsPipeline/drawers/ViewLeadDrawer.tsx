@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Drawer, Input, Spin } from "antd";
-import { useQuery } from "@tanstack/react-query";
+import { Drawer, Input, Spin, message } from "antd";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   RiPhoneLine,
   RiMailLine,
@@ -21,10 +21,16 @@ import {
   RiArrowRightLine,
   RiBookOpenLine,
   RiBuilding2Line,
+  RiLoader4Line,
 } from "react-icons/ri";
 
 import type { Lead } from "../types/lead";
-import { getLeadActivity, getLeadById, type ApiLead } from "../api/leads";
+import {
+  getLeadActivity,
+  getLeadById,
+  addLeadNote,
+  type ApiLead,
+} from "../api/leads";
 
 import { timeAgo, fullDate } from "../utils/dateUtils";
 import type { ActivityEvent, ActivityType } from "../types/Viewlead";
@@ -43,14 +49,12 @@ import ViewActivityCard from "../components/Viewactivitycard";
 import { STAGE_MAP } from "../utils/viewLeadConstants";
 import { getIsAdmin } from "../../../utils/getStoredUser";
 
-// ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
   lead: Lead | null;
   onClose: () => void;
   initialTab?: "notes" | "details" | "activity";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 const ViewLeadDrawer: React.FC<Props> = ({
   lead,
   onClose,
@@ -64,10 +68,11 @@ const ViewLeadDrawer: React.FC<Props> = ({
   );
   const [activitySearch, setActivitySearch] = useState("");
   const [newNote, setNewNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const isAdmin = getIsAdmin();
+  const queryClient = useQueryClient();
 
-  // Fetch fresh lead data so the drawer always reflects latest server state
   const { data: freshLead, isLoading: leadLoading } = useQuery({
     queryKey: ["lead", lead?.id],
     queryFn: () => getLeadById(lead!.id),
@@ -77,7 +82,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
 
   const displayLead = freshLead ?? lead;
 
-  // Fetch activity timeline
   const { data: rawActivity = [], isLoading: activityLoading } = useQuery({
     queryKey: ["lead-activity", lead?.id],
     queryFn: () => getLeadActivity(lead!.id),
@@ -89,7 +93,37 @@ const ViewLeadDrawer: React.FC<Props> = ({
     [rawActivity],
   );
 
-  // Filter + search activity client-side
+  // ─── Add Note Mutation ───────────────────────────────
+  const { mutate: submitNote } = useMutation({
+    mutationFn: (content: string) => addLeadNote(lead!.id, { content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", lead?.id] });
+      queryClient.invalidateQueries({ queryKey: ["lead-activity", lead?.id] });
+      setNewNote("");
+      setSubmitting(false);
+      message.success("Note added!");
+    },
+    onError: () => {
+      message.error("Failed to add note. Please try again.");
+      setSubmitting(false);
+    },
+  });
+
+  const handleAddNote = () => {
+    const text = newNote.trim();
+    if (!text || submitting) return;
+    setSubmitting(true);
+    submitNote(text);
+  };
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleAddNote();
+    }
+  };
+  // ────────────────────────────────────────────────────
+
   const filteredActivity = useMemo(() => {
     let list =
       activityFilter === "all"
@@ -184,7 +218,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-2">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border"
@@ -311,7 +344,7 @@ const ViewLeadDrawer: React.FC<Props> = ({
               )}
             </div>
 
-            {/* Add note form */}
+            {/* ── Add note form ── */}
             <div className="bg-white border-t border-slate-100 p-4 shrink-0">
               <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
                 <RiAddLine size={12} className="text-slate-400" /> Add a note
@@ -319,8 +352,10 @@ const ViewLeadDrawer: React.FC<Props> = ({
               <Input.TextArea
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
+                onKeyDown={handleNoteKeyDown}
                 rows={3}
                 placeholder="Write a note about this student…"
+                disabled={submitting}
                 style={{
                   resize: "none",
                   borderRadius: 10,
@@ -333,15 +368,27 @@ const ViewLeadDrawer: React.FC<Props> = ({
                   ⌘ + Enter to submit
                 </span>
                 <button
-                  disabled={!newNote.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border-none transition-all cursor-pointer outline-none"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || submitting}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border-none transition-all outline-none"
                   style={{
-                    background: newNote.trim() ? "#2563eb" : "#e2e8f0",
-                    color: newNote.trim() ? "#fff" : "#94a3b8",
-                    cursor: newNote.trim() ? "pointer" : "not-allowed",
+                    background:
+                      newNote.trim() && !submitting ? "#2563eb" : "#e2e8f0",
+                    color: newNote.trim() && !submitting ? "#fff" : "#94a3b8",
+                    cursor:
+                      newNote.trim() && !submitting ? "pointer" : "not-allowed",
                   }}
                 >
-                  <RiSendPlaneLine size={14} /> Add Note
+                  {submitting ? (
+                    <>
+                      <RiLoader4Line size={14} className="animate-spin" />{" "}
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <RiSendPlaneLine size={14} /> Add Note
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -368,7 +415,7 @@ const ViewLeadDrawer: React.FC<Props> = ({
               <DetailRow
                 icon={<RiGlobalLine size={14} />}
                 label="Destination"
-                value={displayLead.country}
+                value={displayLead.country ?? "Not provided"}
               />
               <DetailRow
                 icon={<RiUserSmileLine size={14} />}
@@ -382,7 +429,11 @@ const ViewLeadDrawer: React.FC<Props> = ({
                   displayLead.followUp
                     ? new Date(displayLead.followUp).toLocaleDateString(
                         "en-US",
-                        { month: "short", day: "numeric", year: "numeric" },
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
                       )
                     : "Not set"
                 }
@@ -395,7 +446,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
                   value={`Band ${displayLead.ieltsScore}`}
                 />
               )}
-
               {displayLead.category && (
                 <DetailRow
                   icon={
@@ -442,7 +492,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
         {/* ─ Activity tab ─ */}
         {activeTab === "activity" && (
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            {/* Search + filter bar */}
             <div className="bg-white border-b border-slate-100 px-4 py-3 flex flex-col gap-2.5 shrink-0">
               <Input
                 prefix={<RiSearchLine size={13} className="text-slate-400" />}
@@ -482,7 +531,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Activity summary strip */}
             <div className="bg-slate-50 border-b border-slate-100 px-4 py-3 flex items-center gap-4 shrink-0 overflow-x-auto">
               {(
                 [
@@ -528,7 +576,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* Timeline */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2">
               {activityLoading ? (
                 <div className="flex items-center justify-center py-16">

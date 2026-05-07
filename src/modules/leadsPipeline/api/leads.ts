@@ -242,3 +242,22 @@ export const bulkDeleteLeads = async (
       ids,
     })
   ).data;
+
+// ─── Add Note ─────────────────────────────────────────
+export interface AddNotePayload {
+  content: string;
+}
+
+export interface ApiNoteResponse {
+  id: string;
+  content: string;
+  leadId: string;
+  createdAt: string;
+}
+
+export const addLeadNote = async (
+  leadId: string,
+  payload: AddNotePayload,
+): Promise<ApiNoteResponse> =>
+  (await axiosInstance.post<ApiNoteResponse>(`/leads/${leadId}/notes`, payload))
+    .data;
