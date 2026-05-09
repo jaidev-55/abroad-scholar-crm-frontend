@@ -1,14 +1,17 @@
 import type { ApiCallLog } from "../../api/leads";
 import type { CallLogEntry, CallRating } from "./types";
-import { API_TO_OUTCOME } from "./constants";
+import { API_TO_OUTCOME, API_TO_PIPELINE_STATUS } from "./constants";
 
 export function mapApiCallLog(a: ApiCallLog, fallback: string): CallLogEntry {
   const api = a.meta?.outcome;
+  const apiPipeline = a.meta?.pipelineStatus;
   return {
     id: a.id,
     date: a.createdAt,
     duration: a.meta?.duration ?? 0,
     outcome: (api ? API_TO_OUTCOME[api] : undefined) ?? "no_answer",
+    pipelineStatus:
+      (apiPipeline ? API_TO_PIPELINE_STATUS[apiPipeline] : null) ?? null,
     notes: a.meta?.notes ?? "",
     rating: (a.meta?.rating as CallRating) ?? null,
     author: a.user?.name ?? fallback,

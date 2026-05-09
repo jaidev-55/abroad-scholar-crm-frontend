@@ -29,6 +29,7 @@ import {
   markLeadAsLost,
   type ApiLead,
   type LeadStatus,
+  type PipelineStatusApi,
 } from "../api/leads";
 import { getUsers } from "../../../api/auth";
 import { STAGES } from "../utils/constants";
@@ -54,7 +55,10 @@ const LeadsPipelinePage = () => {
   const [counselorFilter, setCounselorFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState(""); // ← new
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<
+    PipelineStatusApi | ""
+  >(""); // ← new
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDefaultStage, setAddModalDefaultStage] = useState<string>();
@@ -86,6 +90,7 @@ const LeadsPipelinePage = () => {
     counselorFilter,
     countryFilter,
     priorityFilter,
+    pipelineStatusFilter, // ← new
     dateRange?.[0]?.format("YYYY-MM-DD") ?? null,
     dateRange?.[1]?.format("YYYY-MM-DD") ?? null,
   ] as const;
@@ -103,10 +108,11 @@ const LeadsPipelinePage = () => {
         source: sourceFilter || undefined,
         country: countryFilter || undefined,
         priority: priorityFilter ? priorityFilter.toUpperCase() : undefined,
+        pipelineStatus:
+          (pipelineStatusFilter as PipelineStatusApi) || undefined, // ← new
         followUpFrom: dateRange?.[0]?.format("YYYY-MM-DD"),
         followUpTo: dateRange?.[1]?.format("YYYY-MM-DD"),
       }),
-
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
     staleTime: 0,
@@ -114,7 +120,7 @@ const LeadsPipelinePage = () => {
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
 
-  //  category filter wired in
+  // counselor + category filtered client-side (no API param needed)
   const filteredLeads = useMemo(() => {
     let list = leads;
     if (counselorFilter)
@@ -293,7 +299,6 @@ const LeadsPipelinePage = () => {
     setAddModalDefaultStage(undefined);
   };
 
-  // categoryFilter added
   const clearFilters = () => {
     setSearch("");
     setSourceFilter("");
@@ -301,10 +306,10 @@ const LeadsPipelinePage = () => {
     setCountryFilter("");
     setPriorityFilter("");
     setCategoryFilter("");
+    setPipelineStatusFilter(""); // ← new
     setDateRange(null);
   };
 
-  // categoryFilter added
   const hasFilters = !!(
     search ||
     sourceFilter ||
@@ -312,6 +317,7 @@ const LeadsPipelinePage = () => {
     countryFilter ||
     priorityFilter ||
     categoryFilter ||
+    pipelineStatusFilter || // ← new
     dateRange
   );
 
@@ -379,6 +385,9 @@ const LeadsPipelinePage = () => {
           onCountryChange={setCountryFilter}
           onPriorityChange={setPriorityFilter}
           onCategoryChange={setCategoryFilter}
+          onPipelineStatusChange={(v) =>
+            setPipelineStatusFilter(v as PipelineStatusApi | "")
+          } // ← new
           onDateRangeChange={(v: DateRangeValue) => setDateRange(v)}
         />
 

@@ -3,12 +3,23 @@ import {
   RiStarLine,
   RiCalendarLine,
   RiCloseCircleLine,
-  RiPhoneLine,
   RiVolumeUpLine,
+  RiUserSmileLine,
+  RiRefreshLine,
+  RiBarChartLine,
+  RiFileList3Line,
+  RiPhoneLine,
 } from "react-icons/ri";
 
-import type { CallOutcome, OutcomeConfig } from "./types";
+import type {
+  CallOutcome,
+  OutcomeConfig,
+  PipelineStatus,
+  PipelineStatusConfig,
+} from "./types";
 import type { CallOutcomeApi } from "../../api/leads";
+
+// ── Call Disposition ──────────────────────────────────────────────────────────
 
 export const OUTCOME_CONFIG: Record<CallOutcome, OutcomeConfig> = {
   interested: {
@@ -79,6 +90,67 @@ export const OUTCOME_CONFIG: Record<CallOutcome, OutcomeConfig> = {
   },
 };
 
+// ── Pipeline Status ───────────────────────────────────────────────────────────
+// Keys now match the API enum (UPPERCASE) and types/lead.ts PipelineStatus
+
+export const PIPELINE_STATUS_CONFIG: Record<
+  PipelineStatus,
+  PipelineStatusConfig
+> = {
+  COUNSELLING_COMPLETED: {
+    label: "Counselling Completed",
+    Icon: RiUserSmileLine,
+    color: "text-emerald-700",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    ringCls: "ring-emerald-300",
+    description: "Full counselling session done",
+  },
+  FOLLOW_UP: {
+    label: "Follow-Up",
+    Icon: RiRefreshLine,
+    color: "text-blue-700",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    badgeCls: "bg-blue-50 text-blue-700 border-blue-200",
+    ringCls: "ring-blue-300",
+    description: "Needs another call or follow-up",
+  },
+  ACTIVE_PIPELINE: {
+    label: "Active Pipeline",
+    Icon: RiBarChartLine,
+    color: "text-violet-700",
+    bg: "bg-violet-50",
+    border: "border-violet-200",
+    badgeCls: "bg-violet-50 text-violet-700 border-violet-200",
+    ringCls: "ring-violet-300",
+    description: "Student is actively considering",
+  },
+  DOCS_PENDING: {
+    label: "Docs Pending",
+    Icon: RiFileList3Line,
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    badgeCls: "bg-amber-50 text-amber-700 border-amber-200",
+    ringCls: "ring-amber-300",
+    description: "Waiting on student documents",
+  },
+  NO_RESPONSE_1ST_CALL: {
+    label: "No Response – 1st Call",
+    Icon: RiPhoneLine,
+    color: "text-slate-600",
+    bg: "bg-slate-50",
+    border: "border-slate-200",
+    badgeCls: "bg-slate-50 text-slate-600 border-slate-200",
+    ringCls: "ring-slate-300",
+    description: "Called once, no answer yet",
+  },
+};
+
+// ── API mappings ──────────────────────────────────────────────────────────────
+
 export const OUTCOME_TO_API: Record<CallOutcome, CallOutcomeApi> = {
   interested: "INTERESTED",
   not_interested: "NOT_INTERESTED",
@@ -95,4 +167,33 @@ export const API_TO_OUTCOME: Partial<Record<CallOutcomeApi, CallOutcome>> = {
   NO_ANSWER: "no_answer",
   VOICEMAIL: "voicemail",
   CONVERTED: "converted",
+};
+
+// ── Pipeline status API mappings ──────────────────────────────────────────────
+// PipelineStatus is now UPPERCASE so API ↔ local is a 1:1 identity mapping
+
+export type PipelineStatusApi =
+  | "COUNSELLING_COMPLETED"
+  | "FOLLOW_UP"
+  | "ACTIVE_PIPELINE"
+  | "DOCS_PENDING"
+  | "NO_RESPONSE_1ST_CALL";
+
+export const PIPELINE_STATUS_TO_API: Record<PipelineStatus, PipelineStatusApi> =
+  {
+    COUNSELLING_COMPLETED: "COUNSELLING_COMPLETED",
+    FOLLOW_UP: "FOLLOW_UP",
+    ACTIVE_PIPELINE: "ACTIVE_PIPELINE",
+    DOCS_PENDING: "DOCS_PENDING",
+    NO_RESPONSE_1ST_CALL: "NO_RESPONSE_1ST_CALL",
+  };
+
+export const API_TO_PIPELINE_STATUS: Partial<
+  Record<PipelineStatusApi, PipelineStatus>
+> = {
+  COUNSELLING_COMPLETED: "COUNSELLING_COMPLETED",
+  FOLLOW_UP: "FOLLOW_UP",
+  ACTIVE_PIPELINE: "ACTIVE_PIPELINE",
+  DOCS_PENDING: "DOCS_PENDING",
+  NO_RESPONSE_1ST_CALL: "NO_RESPONSE_1ST_CALL",
 };

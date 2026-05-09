@@ -1,22 +1,24 @@
-// Reusable Hot / Warm / Cold toggle used in EditLeadDrawer and LeadModal
+import React from "react";
+import { RiFireLine, RiFlashlightLine, RiSnowflakeLine } from "react-icons/ri";
+
 const PRIORITY_OPTIONS = [
   {
     v: "Hot",
-    icon: "🔥",
+    icon: <RiFireLine size={13} />,
     active: "#ef4444",
     lightBg: "#fff5f5",
     border: "#fed7d7",
   },
   {
     v: "Warm",
-    icon: "⚡",
+    icon: <RiFlashlightLine size={13} />,
     active: "#f59e0b",
     lightBg: "#fffbeb",
     border: "#fde68a",
   },
   {
     v: "Cold",
-    icon: "❄️",
+    icon: <RiSnowflakeLine size={13} />,
     active: "#3b82f6",
     lightBg: "#eff6ff",
     border: "#bfdbfe",
@@ -45,7 +47,7 @@ const PriorityPicker: React.FC<PriorityPickerProps> = ({ value, onChange }) => (
             boxShadow: sel ? `0 2px 8px ${o.active}33` : "none",
           }}
         >
-          <span>{o.icon}</span>
+          {o.icon}
           {o.v}
         </button>
       );

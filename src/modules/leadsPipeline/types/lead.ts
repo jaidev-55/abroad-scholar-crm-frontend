@@ -14,6 +14,14 @@ export type LeadCategory = "ACADEMIC" | "ADMISSION";
 // Single consistent priority type — transformLead always produces Hot/Warm/Cold
 export type LeadPriority = "Hot" | "Warm" | "Cold";
 
+// ── Pipeline Status ───────────────────────────────────────────────────────────
+export type PipelineStatus =
+  | "COUNSELLING_COMPLETED"
+  | "FOLLOW_UP"
+  | "ACTIVE_PIPELINE"
+  | "DOCS_PENDING"
+  | "NO_RESPONSE_1ST_CALL";
+
 export interface ApiNote {
   id: string;
   content: string;
@@ -42,6 +50,7 @@ export interface ApiLead {
   createdAt: string;
   updatedAt: string;
   category?: LeadCategory | null;
+  pipelineStatus?: PipelineStatus | null;
 }
 
 // ─── Local app shape ──────────────────────────────────────────────────────────
@@ -70,6 +79,7 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   category?: LeadCategory | null;
+  pipelineStatus?: PipelineStatus | null;
 }
 
 // ─── Stage config shape ───────────────────────────────────────────────────────

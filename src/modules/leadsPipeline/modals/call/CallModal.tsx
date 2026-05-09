@@ -9,6 +9,7 @@ import type {
   CallModalProps,
   CallStatus,
   CallOutcome,
+  PipelineStatus,
   CallRating,
   CallLogFormValues,
 } from "../../utils/calls/types";
@@ -18,7 +19,11 @@ import ActiveCallView from "./components/ActiveCallView";
 import LogForm from "./components/LogForm";
 import CallDoneScreen from "./components/CallDoneScreen";
 import HistoryView from "./components/HistoryView";
-import { OUTCOME_CONFIG, OUTCOME_TO_API } from "../../utils/calls/constants";
+import {
+  OUTCOME_CONFIG,
+  OUTCOME_TO_API,
+  PIPELINE_STATUS_TO_API,
+} from "../../utils/calls/constants";
 import { mapApiCallLog } from "../../utils/calls/helpers";
 
 const CallModal: React.FC<CallModalProps> = ({
@@ -33,6 +38,9 @@ const CallModal: React.FC<CallModalProps> = ({
   const [speaker, setSpeaker] = useState(false);
   const [view, setView] = useState<"call" | "history">("call");
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(
+    null,
+  );
   const [notes, setNotes] = useState("");
   const [rating, setRating] = useState<CallRating | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -45,7 +53,13 @@ const CallModal: React.FC<CallModalProps> = ({
     reset: resetForm,
     setValue,
   } = useForm<CallLogFormValues>({
-    defaultValues: { outcome: "", notes: "", rating: null, followUpDate: null },
+    defaultValues: {
+      outcome: "",
+      pipelineStatus: "",
+      notes: "",
+      rating: null,
+      followUpDate: null,
+    },
   });
 
   const followUpDateValue = watch("followUpDate");
@@ -76,6 +90,7 @@ const CallModal: React.FC<CallModalProps> = ({
       setStatus("idle");
       setSeconds(0);
       setOutcome(null);
+      setPipelineStatus(null);
       setNotes("");
       setRating(null);
       setMuted(false);
@@ -103,6 +118,10 @@ const CallModal: React.FC<CallModalProps> = ({
       if (!outcome || !lead) throw new Error("Missing data");
       return logCall(lead.id, {
         outcome: OUTCOME_TO_API[outcome],
+
+        pipelineStatus: pipelineStatus
+          ? PIPELINE_STATUS_TO_API[pipelineStatus]
+          : null,
         notes: notes.trim() || undefined,
         duration: finalDuration.current,
         rating: rating ?? null,
@@ -118,6 +137,7 @@ const CallModal: React.FC<CallModalProps> = ({
         date: new Date().toISOString(),
         duration: finalDuration.current,
         outcome,
+        pipelineStatus,
         notes: notes.trim(),
         rating,
         author: lead!.counselor,
@@ -212,6 +232,7 @@ const CallModal: React.FC<CallModalProps> = ({
                 lead={lead}
                 finalDuration={finalDuration.current}
                 outcome={outcome}
+                pipelineStatus={pipelineStatus}
                 notes={notes}
                 rating={rating}
                 canSubmit={canSubmit}
@@ -221,6 +242,7 @@ const CallModal: React.FC<CallModalProps> = ({
                 control={control}
                 errors={errors}
                 onOutcomeChange={setOutcome}
+                onPipelineStatusChange={setPipelineStatus}
                 onNotesChange={setNotes}
                 onRatingChange={setRating}
                 onSubmit={() => submitCallLog()}

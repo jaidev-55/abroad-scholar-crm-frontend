@@ -6,6 +6,7 @@ import {
   RiCheckLine,
   RiLoader4Line,
   RiTimeLine,
+  RiBarChartBoxLine,
 } from "react-icons/ri";
 import type { Control, FieldErrors, UseFormSetValue } from "react-hook-form";
 
@@ -16,15 +17,20 @@ import type {
   CallOutcome,
   CallRating,
   Lead,
+  PipelineStatus,
 } from "../../../utils/calls/types";
 import { formatDuration } from "../../../utils/calls/helpers";
-import { OUTCOME_CONFIG } from "../../../utils/calls/constants";
+import {
+  OUTCOME_CONFIG,
+  PIPELINE_STATUS_CONFIG,
+} from "../../../utils/calls/constants";
 import CustomDatePicker from "../../../../../components/common/CustomDatePicker";
 
 interface Props {
   lead: Lead;
   finalDuration: number;
   outcome: CallOutcome | null;
+  pipelineStatus: PipelineStatus | null;
   notes: string;
   rating: CallRating | null;
   canSubmit: boolean;
@@ -34,6 +40,7 @@ interface Props {
   control: Control<CallLogFormValues>;
   errors: FieldErrors<CallLogFormValues>;
   onOutcomeChange: (o: CallOutcome) => void;
+  onPipelineStatusChange: (s: PipelineStatus) => void;
   onNotesChange: (n: string) => void;
   onRatingChange: (r: CallRating) => void;
   onSubmit: () => void;
@@ -44,6 +51,7 @@ const LogForm: React.FC<Props> = ({
   lead,
   finalDuration,
   outcome,
+  pipelineStatus,
   notes,
   rating,
   canSubmit,
@@ -53,6 +61,7 @@ const LogForm: React.FC<Props> = ({
   control,
   errors,
   onOutcomeChange,
+  onPipelineStatusChange,
   onNotesChange,
   onRatingChange,
   onSubmit,
@@ -83,7 +92,7 @@ const LogForm: React.FC<Props> = ({
       </div>
     </div>
 
-    {/* Outcome picker */}
+    {/* ── Section 1: Call Outcome ── */}
     <div>
       <p className="text-[12px] font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
         Call Outcome <span className="text-rose-400">*</span>
@@ -109,10 +118,16 @@ const LogForm: React.FC<Props> = ({
                 onOutcomeChange(key);
                 if (!cfg.showFollowUp) setValue("followUpDate", null);
               }}
-              className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left cursor-pointer outline-none transition-all duration-150 border-2 ${sel ? `${cfg.bg} ${cfg.border} ${cfg.color} ring-2 ${cfg.ringCls} ring-offset-1` : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"}`}
+              className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left cursor-pointer outline-none transition-all duration-150 border-2 ${
+                sel
+                  ? `${cfg.bg} ${cfg.border} ${cfg.color} ring-2 ${cfg.ringCls} ring-offset-1`
+                  : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+              }`}
             >
               <span
-                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${sel ? `${cfg.bg} ${cfg.color}` : "bg-slate-100 text-slate-400"}`}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  sel ? `${cfg.bg} ${cfg.color}` : "bg-slate-100 text-slate-400"
+                }`}
               >
                 <cfg.Icon size={14} />
               </span>
@@ -135,7 +150,11 @@ const LogForm: React.FC<Props> = ({
     {/* Follow-up date */}
     {showFollowUpDate && (
       <div
-        className={`rounded-2xl border p-4 transition-all duration-200 ${outcome === "callback" ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}
+        className={`rounded-2xl border p-4 transition-all duration-200 ${
+          outcome === "callback"
+            ? "bg-amber-50 border-amber-200"
+            : "bg-slate-50 border-slate-200"
+        }`}
         style={{ animation: "fadeSlide 0.2s ease" }}
       >
         <CustomDatePicker
@@ -167,6 +186,64 @@ const LogForm: React.FC<Props> = ({
       </div>
     )}
 
+    {/* ── Section 2: Pipeline Status — 2-col grid, same visual language as Call Outcome ── */}
+    <div>
+      <p className="text-[12px] font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
+        <RiBarChartBoxLine size={13} className="text-slate-400" />
+        Pipeline Status
+        <span className="text-[10px] font-normal text-slate-400 ml-1">
+          — shown on the lead card
+        </span>
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          Object.entries(PIPELINE_STATUS_CONFIG) as [
+            PipelineStatus,
+            (typeof PIPELINE_STATUS_CONFIG)[PipelineStatus],
+          ][]
+        ).map(([key, cfg], idx, arr) => {
+          const sel = pipelineStatus === key;
+          const isLast = idx === arr.length - 1;
+          const isOdd = arr.length % 2 !== 0;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onPipelineStatusChange(key)}
+              className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left cursor-pointer outline-none transition-all duration-150 border-2 ${
+                isLast && isOdd ? "col-span-2" : ""
+              } ${
+                sel
+                  ? `${cfg.bg} ${cfg.border} ${cfg.color} ring-2 ${cfg.ringCls} ring-offset-1`
+                  : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              <span
+                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  sel ? `${cfg.bg} ${cfg.color}` : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                <cfg.Icon size={14} />
+              </span>
+              <span className="text-[12px] font-bold leading-tight flex-1">
+                {cfg.label}
+              </span>
+              {sel && (
+                <RiCheckLine size={13} className={`shrink-0 ${cfg.color}`} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {pipelineStatus && (
+        <p
+          className={`text-[11px] mt-2 ml-0.5 flex items-center gap-1.5 font-medium ${PIPELINE_STATUS_CONFIG[pipelineStatus].color}`}
+        >
+          ● {PIPELINE_STATUS_CONFIG[pipelineStatus].description}
+        </p>
+      )}
+    </div>
+
     {/* Notes */}
     <div>
       <p className="text-[12px] font-bold text-slate-700 mb-2 flex items-center gap-1.5">
@@ -179,7 +256,7 @@ const LogForm: React.FC<Props> = ({
         value={notes}
         onChange={(e) => onNotesChange(e.target.value)}
         placeholder="What was discussed? Key details, follow-up actions, student concerns…"
-        rows={4}
+        rows={3}
         className="w-full outline-none resize-none text-[12px] text-slate-700 placeholder:text-slate-300 leading-relaxed bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-[inherit] transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white"
       />
     </div>
@@ -200,7 +277,11 @@ const LogForm: React.FC<Props> = ({
       type="button"
       onClick={onSubmit}
       disabled={!canSubmit || isSubmitting}
-      className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-white text-[13px] font-bold border-none outline-none transition-all ${canSubmit && !isSubmitting ? "bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-200 cursor-pointer hover:opacity-90 active:scale-95" : "bg-slate-300 cursor-not-allowed"}`}
+      className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-white text-[13px] font-bold border-none outline-none transition-all ${
+        canSubmit && !isSubmitting
+          ? "bg-blue-500 shadow-lg cursor-pointer hover:opacity-90 active:scale-95"
+          : "bg-slate-300 cursor-not-allowed"
+      }`}
     >
       {isSubmitting ? (
         <>

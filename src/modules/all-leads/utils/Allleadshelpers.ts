@@ -42,4 +42,6 @@ export const apiLeadToLocal = (a: ApiLead): Lead => ({
   })),
   createdAt: a.createdAt.split("T")[0],
   updatedAt: a.updatedAt,
+  category: a.category ?? null,
+  pipelineStatus: a.pipelineStatus ?? null,
 });

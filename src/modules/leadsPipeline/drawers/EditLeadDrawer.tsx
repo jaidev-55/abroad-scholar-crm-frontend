@@ -10,9 +10,15 @@ import {
   RiPhoneLine,
   RiMailLine,
   RiLoader4Line,
+  RiUserSmileLine,
+  RiRefreshLine,
+  RiBarChartBoxLine,
+  RiFileList3Line,
+  RiBookOpenLine,
+  RiBuilding2Line,
 } from "react-icons/ri";
 import dayjs from "dayjs";
-import type { Lead } from "../types/lead";
+import type { Lead, PipelineStatus } from "../types/lead";
 import {
   COUNTRIES,
   PRIORITY_TO_API,
@@ -23,7 +29,6 @@ import { getUsers } from "../../../api/auth";
 import CustomInput from "../../../components/common/CustomInput";
 import CustomSelect from "../../../components/common/CustomSelect";
 import CustomDatePicker from "../../../components/common/CustomDatePicker";
-
 import Field from "../../../components/common/Field";
 import StagePicker from "../../../components/common/Stagepicker";
 import PriorityPicker from "../../../components/common/Prioritypicker";
@@ -85,7 +90,9 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
     },
   });
 
-  const methods = useForm<EditFormValues>({
+  const methods = useForm<
+    EditFormValues & { pipelineStatus: PipelineStatus | "" }
+  >({
     values: lead
       ? {
           name: lead.name,
@@ -99,6 +106,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
           followUp: lead.followUp ? dayjs(lead.followUp) : null,
           ieltsScore: lead.ieltsScore || "",
           category: lead.category ?? "",
+          pipelineStatus: (lead.pipelineStatus as PipelineStatus) ?? "",
         }
       : undefined,
   });
@@ -109,7 +117,9 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
     formState: { isDirty, errors },
   } = methods;
 
-  const onSubmit = (data: EditFormValues) => {
+  const onSubmit = (
+    data: EditFormValues & { pipelineStatus: PipelineStatus | "" },
+  ) => {
     if (!lead) return;
     updateLeadMutation({
       id: lead.id,
@@ -129,6 +139,9 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
           : undefined,
         ieltsScore: data.ieltsScore ? parseFloat(data.ieltsScore) : undefined,
         category: (data.category as UpdateLeadPayload["category"]) || undefined,
+        pipelineStatus:
+          (data.pipelineStatus as UpdateLeadPayload["pipelineStatus"]) ||
+          undefined,
       },
     });
   };
@@ -191,12 +204,11 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
-              {/* Personal info card */}
+              {/* ── Personal Info ── */}
               <div className="bg-white shadow rounded-2xl border border-slate-100 p-4 flex flex-col gap-4">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Personal Info
                 </p>
-
                 <CustomInput
                   name="name"
                   label="Full Name"
@@ -205,7 +217,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                   icon={<RiUserLine size={13} className="text-slate-300" />}
                   rules={{ required: "Full name is required" }}
                 />
-
                 <div className="grid grid-cols-2 gap-3">
                   <CustomInput
                     name="phone"
@@ -230,7 +241,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                     }}
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <CustomSelect
                     name="country"
@@ -251,12 +261,11 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                 </div>
               </div>
 
-              {/* Classification card */}
+              {/* ── Classification ── */}
               <div className="bg-white shadow rounded-2xl border border-slate-100 p-4 flex flex-col gap-4">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Classification
                 </p>
-
                 <Controller
                   name="stage"
                   control={control}
@@ -269,7 +278,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                     </Field>
                   )}
                 />
-
                 <Controller
                   name="priority"
                   control={control}
@@ -282,9 +290,7 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                     </Field>
                   )}
                 />
-
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Counselor with loading spinner overlay */}
                   <div className="relative">
                     <CustomSelect
                       name="counselor"
@@ -305,7 +311,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                       </div>
                     )}
                   </div>
-
                   <CustomDatePicker
                     name="followUp"
                     label="Follow-up Date"
@@ -314,7 +319,6 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                     errors={errors}
                   />
                 </div>
-
                 <CustomInput
                   name="ieltsScore"
                   label="IELTS Score (if known)"
@@ -326,24 +330,110 @@ const EditLeadDrawer: React.FC<Props> = ({ lead, onClose, onSave }) => {
                   }
                   control={control}
                 />
-
-                <CustomSelect
-                  name="category"
-                  label="Lead Category"
-                  placeholder="Select category (optional)"
-                  control={control}
-                  errors={errors}
-                  options={[
-                    {
-                      value: "ACADEMIC",
-                      label: "🎓 Academic — IELTS / PTE Coaching",
-                    },
-                    {
-                      value: "ADMISSION",
-                      label: "🏫 Admission — University Applications",
-                    },
-                  ]}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <CustomSelect
+                    name="category"
+                    label="Lead Category"
+                    placeholder="Select category"
+                    control={control}
+                    errors={errors}
+                    options={[
+                      {
+                        value: "ACADEMIC",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiBookOpenLine
+                              size={13}
+                              className="text-violet-500"
+                            />
+                            Academic
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "ADMISSION",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiBuilding2Line
+                              size={13}
+                              className="text-blue-500"
+                            />
+                            Admission
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                  <CustomSelect
+                    name="pipelineStatus"
+                    label="Pipeline Status"
+                    placeholder="Select status"
+                    control={control}
+                    errors={errors}
+                    options={[
+                      {
+                        value: "COUNSELLING_COMPLETED",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiUserSmileLine
+                              size={13}
+                              className="text-emerald-500"
+                            />
+                            Counselling Completed
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "FOLLOW_UP",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiRefreshLine
+                              size={13}
+                              className="text-blue-500"
+                            />
+                            Follow-Up
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "ACTIVE_PIPELINE",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiBarChartBoxLine
+                              size={13}
+                              className="text-violet-500"
+                            />
+                            Active Pipeline
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "DOCS_PENDING",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiFileList3Line
+                              size={13}
+                              className="text-amber-500"
+                            />
+                            Docs Pending
+                          </span>
+                        ),
+                      },
+                      {
+                        value: "NO_RESPONSE_1ST_CALL",
+                        label: (
+                          <span className="flex items-center gap-1.5">
+                            <RiPhoneLine
+                              size={13}
+                              className="text-slate-400"
+                            />
+                            No Response – 1st Call
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
 

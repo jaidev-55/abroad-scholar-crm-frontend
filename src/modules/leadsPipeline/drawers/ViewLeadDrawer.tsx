@@ -22,9 +22,10 @@ import {
   RiBookOpenLine,
   RiBuilding2Line,
   RiLoader4Line,
+  RiBarChartBoxLine,
 } from "react-icons/ri";
 
-import type { Lead } from "../types/lead";
+import type { Lead, PipelineStatus } from "../types/lead";
 import {
   getLeadActivity,
   getLeadById,
@@ -48,6 +49,15 @@ import DetailRow from "../../../components/common/Detailrow";
 import ViewActivityCard from "../components/Viewactivitycard";
 import { STAGE_MAP } from "../utils/viewLeadConstants";
 import { getIsAdmin } from "../../../utils/getStoredUser";
+
+// ── Pipeline Status label map ─────────────────────────────────────────────────
+const PIPELINE_STATUS_LABEL: Record<PipelineStatus, string> = {
+  COUNSELLING_COMPLETED: "Counselling Completed",
+  FOLLOW_UP: "Follow-Up",
+  ACTIVE_PIPELINE: "Active Pipeline",
+  DOCS_PENDING: "Docs Pending",
+  NO_RESPONSE_1ST_CALL: "No Response – 1st Call",
+};
 
 interface Props {
   lead: Lead | null;
@@ -122,7 +132,6 @@ const ViewLeadDrawer: React.FC<Props> = ({
       handleAddNote();
     }
   };
-  // ────────────────────────────────────────────────────
 
   const filteredActivity = useMemo(() => {
     let list =
@@ -250,6 +259,13 @@ const ViewLeadDrawer: React.FC<Props> = ({
           {displayLead.counselor && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
               <RiUserSmileLine size={11} /> {displayLead.counselor}
+            </span>
+          )}
+          {/* Pipeline status pill in header */}
+          {displayLead.pipelineStatus && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+              <RiBarChartBoxLine size={11} />
+              {PIPELINE_STATUS_LABEL[displayLead.pipelineStatus]}
             </span>
           )}
         </div>
@@ -461,6 +477,14 @@ const ViewLeadDrawer: React.FC<Props> = ({
                       ? "Academic"
                       : "Admission"
                   }
+                />
+              )}
+              {/* ── Pipeline Status row ── */}
+              {displayLead.pipelineStatus && (
+                <DetailRow
+                  icon={<RiBarChartBoxLine size={14} />}
+                  label="Pipeline Status"
+                  value={PIPELINE_STATUS_LABEL[displayLead.pipelineStatus]}
                 />
               )}
             </div>

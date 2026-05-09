@@ -15,6 +15,7 @@ import {
   type ApiLead,
   type LeadStatus as ApiLeadStatus,
   type LeadPriority,
+  type PipelineStatusApi,
 } from "../../leadsPipeline/api/leads";
 import { apiLeadToLocal } from "../utils/Allleadshelpers";
 import AllLeadsTable from "../components/Allleadstable";
@@ -42,6 +43,9 @@ const AllLeadsPage: React.FC = () => {
   const [priorityF, setPriorityF] = useState<LeadPriority | "">("");
   const [statusF, setStatusF] = useState<ApiLeadStatus | "">("");
   const [categoryF, setCategoryF] = useState<string>("");
+  const [pipelineStatusF, setPipelineStatusF] = useState<
+    PipelineStatusApi | ""
+  >(""); // ← new
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -75,6 +79,7 @@ const AllLeadsPage: React.FC = () => {
       priorityF,
       statusF,
       categoryF,
+      pipelineStatusF, // ← new
       dateRange?.[0]?.format("YYYY-MM-DD"),
       dateRange?.[1]?.format("YYYY-MM-DD"),
     ],
@@ -86,6 +91,7 @@ const AllLeadsPage: React.FC = () => {
         priority: priorityF || undefined,
         status: statusF || undefined,
         category: (categoryF as LeadCategory) || undefined,
+        pipelineStatus: (pipelineStatusF as PipelineStatusApi) || undefined, // ← new
         startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         endDate: dateRange?.[1]
           ? dateRange[1].add(1, "day").format("YYYY-MM-DD")
@@ -161,7 +167,8 @@ const AllLeadsPage: React.FC = () => {
     setCountryF("");
     setPriorityF("");
     setStatusF("");
-    setCategoryF(""); // ← new
+    setCategoryF("");
+    setPipelineStatusF(""); // ← new
     setDateRange(null);
   }, []);
 
@@ -205,6 +212,7 @@ const AllLeadsPage: React.FC = () => {
     priorityF ||
     statusF ||
     categoryF ||
+    pipelineStatusF || // ← new
     dateRange
   );
 
@@ -237,7 +245,6 @@ const AllLeadsPage: React.FC = () => {
         </div>
 
         {/* Stats */}
-
         <PipelineStats stats={stats} />
 
         <FilterBar
@@ -249,6 +256,9 @@ const AllLeadsPage: React.FC = () => {
           clearFilters={clearFilters}
           onStatusChange={(v) => setStatusF(v as ApiLeadStatus | "")}
           onCategoryChange={setCategoryF}
+          onPipelineStatusChange={(v) =>
+            setPipelineStatusF(v as PipelineStatusApi | "")
+          } // ← new
           counselorUsers={counselorUsers}
           onExport={() => setExportModalOpen(true)}
           onSearchChange={setSearch}

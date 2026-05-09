@@ -14,10 +14,11 @@ import {
   RiAwardLine,
   RiSendPlaneLine,
   RiAddLine,
+  RiBarChartBoxLine,
 } from "react-icons/ri";
 import { useQuery } from "@tanstack/react-query";
 
-import type { Lead } from "../types/lead";
+import type { Lead, PipelineStatus } from "../types/lead";
 
 import {
   mapApiType,
@@ -34,6 +35,34 @@ import { ACTIVITY_CONFIG } from "../utils/Activityconfig";
 import type { TabKey } from "../types/lead";
 import UserAvatar from "../../../components/common/UserAvatar";
 import { getLeadActivity } from "../api/leads";
+
+// ── Pipeline Status config ────────────────────────────────────────────────────
+const PIPELINE_STATUS_LABEL: Record<PipelineStatus, string> = {
+  COUNSELLING_COMPLETED: "Counselling Completed",
+  FOLLOW_UP: "Follow-Up",
+  ACTIVE_PIPELINE: "Active Pipeline",
+  DOCS_PENDING: "Docs Pending",
+  NO_RESPONSE_1ST_CALL: "No Response – 1st Call",
+};
+
+const PIPELINE_STATUS_STYLE: Record<
+  PipelineStatus,
+  { bg: string; color: string; border: string }
+> = {
+  COUNSELLING_COMPLETED: {
+    bg: "#f0fdf4",
+    color: "#15803d",
+    border: "#bbf7d0",
+  },
+  FOLLOW_UP: { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
+  ACTIVE_PIPELINE: { bg: "#f5f3ff", color: "#6d28d9", border: "#ddd6fe" },
+  DOCS_PENDING: { bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
+  NO_RESPONSE_1ST_CALL: {
+    bg: "#f8fafc",
+    color: "#475569",
+    border: "#e2e8f0",
+  },
+};
 
 interface Props {
   lead: Lead | null;
@@ -64,7 +93,6 @@ const LeadNotesDrawer: React.FC<Props> = ({
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch activity timeline from API
   const { data: rawActivity = [], isLoading: activityLoading } = useQuery({
     queryKey: ["lead-activity", lead?.id],
     queryFn: () => getLeadActivity(lead!.id),
@@ -85,6 +113,10 @@ const LeadNotesDrawer: React.FC<Props> = ({
   const isOverdue = lead.followUp
     ? new Date(lead.followUp) < new Date()
     : false;
+
+  const pipelineStyle = lead.pipelineStatus
+    ? PIPELINE_STATUS_STYLE[lead.pipelineStatus]
+    : null;
 
   const handleSubmit = () => {
     const text = newNote.trim();
@@ -165,7 +197,7 @@ const LeadNotesDrawer: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Stage / priority / source / counselor badges */}
+        {/* Badges */}
         <div className="flex flex-wrap gap-2">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border"
@@ -193,6 +225,20 @@ const LeadNotesDrawer: React.FC<Props> = ({
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-500 border border-slate-200">
             <RiUserSmileLine size={11} /> {lead.counselor}
           </span>
+          {/* ── Pipeline Status badge ── */}
+          {lead.pipelineStatus && pipelineStyle && (
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border"
+              style={{
+                background: pipelineStyle.bg,
+                color: pipelineStyle.color,
+                borderColor: pipelineStyle.border,
+              }}
+            >
+              <RiBarChartBoxLine size={11} />
+              {PIPELINE_STATUS_LABEL[lead.pipelineStatus]}
+            </span>
+          )}
         </div>
       </div>
 
@@ -403,12 +449,12 @@ const LeadNotesDrawer: React.FC<Props> = ({
               <DetailRow
                 icon={<RiGlobalLine size={14} />}
                 label="Destination"
-                value={lead.country}
+                value={lead.country ?? "Not provided"}
               />
               <DetailRow
                 icon={<RiUserSmileLine size={14} />}
                 label="Counselor"
-                value={lead.counselor}
+                value={lead.counselor ?? "Unassigned"}
               />
               <DetailRow
                 icon={<RiMapPinLine size={14} />}
@@ -445,6 +491,14 @@ const LeadNotesDrawer: React.FC<Props> = ({
                   value={`Band ${lead.ieltsScore}`}
                 />
               )}
+              {/* ── Pipeline Status row ── */}
+              {lead.pipelineStatus && (
+                <DetailRow
+                  icon={<RiBarChartBoxLine size={14} />}
+                  label="Pipeline Status"
+                  value={PIPELINE_STATUS_LABEL[lead.pipelineStatus]}
+                />
+              )}
             </div>
           </div>
         )}
@@ -452,7 +506,6 @@ const LeadNotesDrawer: React.FC<Props> = ({
         {/* ─ Activity tab ─ */}
         {activeTab === "activity" && (
           <div className="flex-1 overflow-y-auto notes-scroll px-4 pt-4 pb-4">
-            {/* Activity type stats */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               {(
                 [
@@ -492,7 +545,6 @@ const LeadNotesDrawer: React.FC<Props> = ({
               })}
             </div>
 
-            {/* Timeline */}
             {activityLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Spin size="large" />

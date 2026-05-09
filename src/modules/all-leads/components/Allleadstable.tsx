@@ -14,11 +14,16 @@ import {
   RiLoader4Line,
   RiBookOpenLine,
   RiBuilding2Line,
+  RiUserSmileLine,
+  RiRefreshLine,
+  RiBarChartBoxLine,
+  RiFileList3Line,
 } from "react-icons/ri";
 import type {
   ApiLead,
   LeadPriority,
   LeadStatus as ApiLeadStatus,
+  PipelineStatusApi,
 } from "../../../modules/leadsPipeline/api/leads";
 import { PRIORITY_ORDER } from "../utils/constants";
 import { Avatar, PriBadge, SrcBadge, StatusBadge } from "./Allleadsatoms";
@@ -38,6 +43,93 @@ interface Props {
   onRefetch: () => void;
 }
 
+// ── Pipeline Status Badge ─────────────────────────────────────────────────────
+
+const PIPELINE_STATUS_CONFIG: Record<
+  PipelineStatusApi,
+  { label: string; icon: React.ReactElement; cls: string; dot: string }
+> = {
+  COUNSELLING_COMPLETED: {
+    label: "Counselling Done",
+    icon: <RiUserSmileLine size={10} />,
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  FOLLOW_UP: {
+    label: "Follow-Up",
+    icon: <RiRefreshLine size={10} />,
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+    dot: "bg-blue-500",
+  },
+  ACTIVE_PIPELINE: {
+    label: "Active Pipeline",
+    icon: <RiBarChartBoxLine size={10} />,
+    cls: "bg-violet-50 text-violet-700 border-violet-200",
+    dot: "bg-violet-500",
+  },
+  DOCS_PENDING: {
+    label: "Docs Pending",
+    icon: <RiFileList3Line size={10} />,
+    cls: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500",
+  },
+  NO_RESPONSE_1ST_CALL: {
+    label: "No Response",
+    icon: <RiPhoneLine size={10} />,
+    cls: "bg-slate-50 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+  },
+};
+
+const PipelineStatusBadge: React.FC<{
+  status?: PipelineStatusApi | null;
+}> = ({ status }) => {
+  if (!status) return <span className="text-[11px] text-slate-300">—</span>;
+  const cfg = PIPELINE_STATUS_CONFIG[status];
+  if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+};
+
+// ── Category Badge ────────────────────────────────────────────────────────────
+
+const CATEGORY_CONFIG = {
+  ACADEMIC: {
+    icon: <RiBookOpenLine size={10} />,
+    label: "Academic",
+    cls: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  ADMISSION: {
+    icon: <RiBuilding2Line size={10} />,
+    label: "Admission",
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+} as const;
+
+const CategoryBadge: React.FC<{ category?: string | null }> = ({
+  category,
+}) => {
+  if (!category) return <span className="text-[11px] text-slate-300">—</span>;
+  const cfg = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG];
+  if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+    >
+      {cfg.icon} {cfg.label}
+    </span>
+  );
+};
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
 const AllLeadsTable: React.FC<Props> = ({
   data,
   isLoading,
@@ -52,33 +144,6 @@ const AllLeadsTable: React.FC<Props> = ({
   onClearFilters,
   onRefetch,
 }) => {
-  const CATEGORY_CONFIG = {
-    ACADEMIC: {
-      icon: <RiBookOpenLine size={10} />,
-      label: "Academic",
-      cls: "bg-violet-50 text-violet-700 border-violet-200",
-    },
-    ADMISSION: {
-      icon: <RiBuilding2Line size={10} />,
-      label: "Admission",
-      cls: "bg-blue-50 text-blue-700 border-blue-200",
-    },
-  } as const;
-
-  const CategoryBadge: React.FC<{ category?: string | null }> = ({
-    category,
-  }) => {
-    if (!category) return <span className="text-[11px] text-slate-300">—</span>;
-    const cfg = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG];
-    if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
-      >
-        {cfg.icon} {cfg.label}
-      </span>
-    );
-  };
   const baseColumns: TableColumnsType<ApiLead> = [
     {
       title: (
@@ -103,7 +168,6 @@ const AllLeadsTable: React.FC<Props> = ({
                 <RiGlobalLine size={9} /> {rec.country}
               </div>
             </div>
-            {/* Delete button — only visible on row hover, only for admin */}
             {isAdmin && (
               <button
                 onClick={(e) => {
@@ -198,6 +262,23 @@ const AllLeadsTable: React.FC<Props> = ({
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex justify-center">
           <CategoryBadge category={rec.category} />
+        </div>
+      ),
+    },
+    // ── NEW: Pipeline Status column ──────────────────────────────────────────
+    {
+      title: (
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          Pipeline Status
+        </span>
+      ),
+      dataIndex: "pipelineStatus",
+      key: "pipelineStatus",
+      width: 150,
+      align: "center" as const,
+      render: (_: unknown, rec: ApiLead) => (
+        <div className="flex justify-center">
+          <PipelineStatusBadge status={rec.pipelineStatus} />
         </div>
       ),
     },

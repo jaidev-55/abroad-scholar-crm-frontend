@@ -16,8 +16,11 @@ import {
   RiPhoneLine,
   RiStickyNoteLine,
   RiUserSmileLine,
+  RiBarChartBoxLine,
+  RiRefreshLine,
+  RiFileList3Line,
 } from "react-icons/ri";
-import type { Lead } from "../types/lead";
+import type { Lead, PipelineStatus } from "../types/lead";
 import { useSortable } from "@dnd-kit/sortable";
 import { STAGES } from "../utils/constants";
 import UserAvatar from "../../../components/common/UserAvatar";
@@ -25,7 +28,64 @@ import SourceBadge from "../../../components/common/badges/SourceBadge";
 import PriorityBadge from "../../../components/common/badges/PriorityBadge";
 import { getIsAdmin } from "../../../utils/getStoredUser";
 
-// Category badge
+// ── Pipeline Status Badge ─────────────────────────────────────────────────────
+
+const PIPELINE_STATUS_CONFIG: Record<
+  PipelineStatus,
+  { label: string; icon: React.ElementType; cls: string; dot: string }
+> = {
+  COUNSELLING_COMPLETED: {
+    label: "Counselling Done",
+    icon: RiUserSmileLine,
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  FOLLOW_UP: {
+    label: "Follow-Up",
+    icon: RiRefreshLine,
+    cls: "bg-blue-50 text-blue-700 border-blue-200",
+    dot: "bg-blue-500",
+  },
+  ACTIVE_PIPELINE: {
+    label: "Active Pipeline",
+    icon: RiBarChartBoxLine,
+    cls: "bg-violet-50 text-violet-700 border-violet-200",
+    dot: "bg-violet-500",
+  },
+  DOCS_PENDING: {
+    label: "Docs Pending",
+    icon: RiFileList3Line,
+    cls: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500",
+  },
+  NO_RESPONSE_1ST_CALL: {
+    label: "No Response",
+    icon: RiPhoneLine,
+    cls: "bg-slate-50 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+  },
+};
+
+const PipelineStatusBadge: React.FC<{ status?: PipelineStatus | null }> = ({
+  status,
+}) => {
+  if (!status) return null;
+  const cfg = PIPELINE_STATUS_CONFIG[status];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+      <Icon size={10} />
+      {cfg.label}
+    </span>
+  );
+};
+
+// ── Category Badge ────────────────────────────────────────────────────────────
+
 const CATEGORY_CONFIG = {
   ACADEMIC: {
     icon: RiBookOpenLine,
@@ -54,6 +114,8 @@ const CategoryBadge: React.FC<{ category?: string | null }> = ({
     </span>
   );
 };
+
+// ── KanbanCard ────────────────────────────────────────────────────────────────
 
 const KanbanCard: React.FC<{
   lead: Lead;
@@ -202,12 +264,12 @@ const KanbanCard: React.FC<{
         </div>
       </div>
 
-      {/* Badges — source + priority + category */}
+      {/* Badges — source + priority + category + pipeline status */}
       <div className="flex flex-wrap gap-1.5 mb-3">
-        {isAdmin && <SourceBadge source={lead.source} />}{" "}
-        {/* ← hide for counselors */}
+        {isAdmin && <SourceBadge source={lead.source} />}
         <PriorityBadge priority={lead.priority} />
         <CategoryBadge category={lead.category} />
+        <PipelineStatusBadge status={lead.pipelineStatus} />
       </div>
 
       {/* Info rows */}

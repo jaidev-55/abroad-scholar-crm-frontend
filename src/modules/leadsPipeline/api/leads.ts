@@ -57,7 +57,8 @@ export interface UpdateLeadPayload {
   followUpDate?: string;
   lostReason?: string;
   notes?: Array<{ id?: string; content: string }>;
-  category?: LeadCategory | null; // ← new
+  category?: LeadCategory | null;
+  pipelineStatus?: PipelineStatusApi | null;
 }
 
 export const updateLead = async (
@@ -81,7 +82,8 @@ export interface GetLeadsParams {
   endDate?: string;
   page?: number;
   limit?: number;
-  category?: LeadCategory; // ← new
+  category?: LeadCategory;
+  pipelineStatus?: PipelineStatusApi;
 }
 
 export interface ApiNote {
@@ -113,7 +115,8 @@ export interface ApiLead {
   notes?: ApiNote[];
   createdAt: string;
   updatedAt: string;
-  category?: LeadCategory | null; // ← new
+  category?: LeadCategory | null;
+  pipelineStatus?: PipelineStatusApi | null;
 }
 
 export const getLeads = async (params?: GetLeadsParams): Promise<ApiLead[]> =>
@@ -166,8 +169,17 @@ export type CallOutcomeApi =
   | "VOICEMAIL"
   | "CONVERTED";
 
+// Pipeline status values — must match the backend PipelineStatus enum
+export type PipelineStatusApi =
+  | "COUNSELLING_COMPLETED"
+  | "FOLLOW_UP"
+  | "ACTIVE_PIPELINE"
+  | "DOCS_PENDING"
+  | "NO_RESPONSE_1ST_CALL";
+
 export interface LogCallPayload {
   outcome: CallOutcomeApi;
+  pipelineStatus?: PipelineStatusApi | null; // ← new
   notes?: string;
   duration: number;
   rating?: number | null;
@@ -177,6 +189,7 @@ export interface LogCallPayload {
 export interface LogCallResponse {
   id: string;
   outcome: CallOutcomeApi;
+  pipelineStatus?: PipelineStatusApi | null; // ← new
   notes?: string;
   duration: number;
   rating?: number | null;
@@ -209,6 +222,7 @@ export interface ApiCallLog {
     notes?: string;
     rating?: number;
     outcome?: CallOutcomeApi;
+    pipelineStatus?: PipelineStatusApi | null; // ← new
     duration?: number;
     followUpDate?: string | null;
   } | null;

@@ -1,7 +1,8 @@
 import type { Dayjs } from "dayjs";
 import type { IconType } from "react-icons";
+import type { LeadCategory } from "../modules/leadsPipeline/api/leads";
+import type { PipelineStatus } from "../modules/leadsPipeline/types/lead";
 
-// LeadPipeLineForm
 export interface FormValues {
   name: string;
   phone: string;
@@ -58,4 +59,6 @@ export interface Lead {
   updatedAt?: string;
   notes: Note[];
   isOverdue?: boolean;
+  category?: LeadCategory | null;
+  pipelineStatus?: PipelineStatus | null;
 }

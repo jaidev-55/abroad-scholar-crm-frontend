@@ -31,14 +31,17 @@ export function apiLeadToLocal(a: ApiLead): Lead {
     priority: (a.priority.charAt(0) +
       a.priority.slice(1).toLowerCase()) as Lead["priority"],
     counselor: a.counselor?.name ?? "",
+    counselorId: a.counselorId ?? "",
     followUp: a.followUpDate?.split("T")[0] ?? "",
     ieltsScore: a.ieltsScore != null ? String(a.ieltsScore) : undefined,
     category: a.category ?? null,
-    notes: (a.notes ?? []).map((n) => ({
+    pipelineStatus: a.pipelineStatus ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    notes: (a.notes ?? []).map((n: any) => ({
       id: n.id,
       text: n.content,
       createdAt: n.createdAt,
-      author: a.counselor?.name ?? "Admin",
+      author: n.user?.name ?? a.counselor?.name ?? "Admin",
     })),
     createdAt: a.createdAt.split("T")[0],
     updatedAt: a.updatedAt,
