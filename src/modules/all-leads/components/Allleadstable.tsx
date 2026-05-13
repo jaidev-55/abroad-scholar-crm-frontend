@@ -50,7 +50,7 @@ const PIPELINE_STATUS_CONFIG: Record<
   { label: string; icon: React.ReactElement; cls: string; dot: string }
 > = {
   COUNSELLING_COMPLETED: {
-    label: "Counselling Done",
+    label: "Counselled",
     icon: <RiUserSmileLine size={10} />,
     cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
     dot: "bg-emerald-500",
@@ -62,7 +62,7 @@ const PIPELINE_STATUS_CONFIG: Record<
     dot: "bg-blue-500",
   },
   ACTIVE_PIPELINE: {
-    label: "Active Pipeline",
+    label: "Active",
     icon: <RiBarChartBoxLine size={10} />,
     cls: "bg-violet-50 text-violet-700 border-violet-200",
     dot: "bg-violet-500",
@@ -89,10 +89,9 @@ const PipelineStatusBadge: React.FC<{
   if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-      {cfg.icon}
       {cfg.label}
     </span>
   );
@@ -121,7 +120,7 @@ const CategoryBadge: React.FC<{ category?: string | null }> = ({
   if (!cfg) return <span className="text-[11px] text-slate-300">—</span>;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${cfg.cls}`}
     >
       {cfg.icon} {cfg.label}
     </span>
@@ -153,18 +152,19 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "fullName",
       key: "name",
-      width: 180,
+      width: 160,
+      fixed: "left",
       ellipsis: true,
       sorter: (a, b) => a.fullName.localeCompare(b.fullName),
       render: (name: string, rec: ApiLead) => (
         <Tooltip title={`${name} · ${rec.country ?? ""}`} mouseEnterDelay={0.5}>
-          <div className="flex items-center gap-2.5 py-0.5 w-full overflow-hidden group/row">
-            <Avatar name={name} size={34} />
+          <div className="flex items-center gap-2 py-0.5 w-full overflow-hidden group/row">
+            <Avatar name={name} size={30} />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
+              <div className="text-[12px] font-semibold text-slate-900 truncate leading-tight">
                 {name}
               </div>
-              <div className="text-[11px] text-slate-400 truncate flex items-center gap-1">
+              <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
                 <RiGlobalLine size={9} /> {rec.country}
               </div>
             </div>
@@ -174,15 +174,10 @@ const AllLeadsTable: React.FC<Props> = ({
                   e.stopPropagation();
                   onDeleteClick(rec.id, rec.fullName, e);
                 }}
-                className="opacity-0 group-hover/row:opacity-100 w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all shrink-0"
+                className="opacity-0 group-hover/row:opacity-100 w-5 h-5 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 border-none cursor-pointer transition-all shrink-0"
               >
-                <RiDeleteBinLine size={13} />
+                <RiDeleteBinLine size={12} />
               </button>
-            )}
-            {rec.status === "LOST" && (
-              <Tooltip title="Lost">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-              </Tooltip>
             )}
           </div>
         </Tooltip>
@@ -195,25 +190,25 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
       key: "contact",
-      width: 150,
-      align: "center",
+      width: 140,
+      ellipsis: true,
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex flex-col gap-0.5">
           <a
             href={`tel:${rec.phone}`}
             onClick={(e) => e.stopPropagation()}
-            className="text-xs text-slate-600 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors"
+            className="text-[11px] text-slate-600 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors"
           >
-            <RiPhoneLine size={11} className="text-slate-400 shrink-0" />
+            <RiPhoneLine size={10} className="text-slate-400 shrink-0" />
             {rec.phone}
           </a>
           {rec.email && (
             <a
               href={`mailto:${rec.email}`}
               onClick={(e) => e.stopPropagation()}
-              className="text-[11px] text-slate-400 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors truncate max-w-[200px]"
+              className="text-[10px] text-slate-400 hover:text-blue-600 flex items-center gap-1 no-underline transition-colors truncate max-w-[130px]"
             >
-              <RiMailLine size={11} className="shrink-0" />
+              <RiMailLine size={10} className="shrink-0" />
               {rec.email}
             </a>
           )}
@@ -228,7 +223,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "status",
       key: "status",
-      width: 120,
+      width: 90,
       align: "center",
       sorter: (a, b) => a.status.localeCompare(b.status),
       render: (s: ApiLeadStatus) => (
@@ -245,7 +240,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "source",
       key: "source",
-      width: 120,
+      width: 80,
       align: "center",
       render: (src: string) => <SrcBadge src={src} />,
     },
@@ -257,7 +252,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "category",
       key: "category",
-      width: 110,
+      width: 85,
       align: "center" as const,
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex justify-center">
@@ -265,16 +260,15 @@ const AllLeadsTable: React.FC<Props> = ({
         </div>
       ),
     },
-    // ── NEW: Pipeline Status column ──────────────────────────────────────────
     {
       title: (
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Pipeline Status
+          Pipeline
         </span>
       ),
       dataIndex: "pipelineStatus",
       key: "pipelineStatus",
-      width: 150,
+      width: 100,
       align: "center" as const,
       render: (_: unknown, rec: ApiLead) => (
         <div className="flex justify-center">
@@ -290,7 +284,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "priority",
       key: "priority",
-      width: 90,
+      width: 70,
       align: "center",
       sorter: (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
       render: (p: LeadPriority) => (
@@ -306,16 +300,16 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
       key: "counselor",
-      width: 150,
+      width: 100,
       align: "center",
       render: (_: unknown, rec: ApiLead) => {
         const name = rec.counselor?.name;
         return !name ? (
           <span className="text-[11px] text-slate-300">—</span>
         ) : (
-          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-            <Avatar name={name} size={20} />
-            <span className="text-xs text-slate-600 truncate max-w-[70px]">
+          <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+            <Avatar name={name} size={18} />
+            <span className="text-[11px] text-slate-600 truncate max-w-[60px]">
               {name.split(" ")[0]}
             </span>
           </div>
@@ -330,11 +324,11 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "ieltsScore",
       key: "ielts",
-      width: 70,
+      width: 55,
       align: "center",
       render: (v: number | null) =>
         v != null ? (
-          <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-200">
+          <span className="text-[11px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-md border border-violet-200">
             {v}
           </span>
         ) : (
@@ -349,7 +343,7 @@ const AllLeadsTable: React.FC<Props> = ({
       ),
       dataIndex: "followUpDate",
       key: "followUp",
-      width: 115,
+      width: 90,
       align: "center",
       sorter: (a, b) =>
         new Date(a.followUpDate ?? 0).getTime() -
@@ -361,7 +355,7 @@ const AllLeadsTable: React.FC<Props> = ({
         const isToday = d === today;
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border ${
+            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${
               overdue
                 ? "bg-red-50 text-red-600 border-red-200"
                 : isToday
@@ -369,12 +363,12 @@ const AllLeadsTable: React.FC<Props> = ({
                   : "bg-slate-50 text-slate-500 border-slate-200"
             }`}
           >
-            <RiCalendarLine size={10} />
+            <RiCalendarLine size={9} />
             {new Date(date).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             })}
-            {overdue && <RiErrorWarningLine size={10} className="ml-0.5" />}
+            {overdue && <RiErrorWarningLine size={9} />}
           </span>
         );
       },
@@ -386,19 +380,19 @@ const AllLeadsTable: React.FC<Props> = ({
         </span>
       ),
       key: "notes",
-      width: 75,
+      width: 55,
       align: "center",
       render: (_: unknown, rec: ApiLead) => {
         const n = rec.notes?.length ?? 0;
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${
+            className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${
               n > 0
                 ? "bg-blue-50 text-blue-600 border-blue-200"
                 : "bg-slate-50 text-slate-400 border-slate-200"
             }`}
           >
-            <RiStickyNoteLine size={11} />
+            <RiStickyNoteLine size={10} />
             {n}
           </span>
         );
@@ -413,15 +407,14 @@ const AllLeadsTable: React.FC<Props> = ({
       dataIndex: "createdAt",
       defaultSortOrder: "descend",
       key: "createdAt",
-      width: 95,
+      width: 75,
       sorter: (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       render: (d: string) => (
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[10px] text-slate-400">
           {new Date(d).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
-            year: "2-digit",
           })}
         </span>
       ),
@@ -454,13 +447,13 @@ const AllLeadsTable: React.FC<Props> = ({
           rowSelection={{
             selectedRowKeys: selected,
             onChange: (keys) => onSelectChange(keys as string[]),
-            columnWidth: 44,
+            columnWidth: 36,
           }}
           dataSource={data}
           columns={columns}
           rowKey="id"
           className="[&_.ant-table-container]:!rounded-none [&_.ant-table-body]:!overflow-x-auto"
-          scroll={{ x: true, y: 560 }}
+          scroll={{ x: 1200, y: 560 }}
           size="small"
           loading={{
             spinning: isLoading,
