@@ -11,7 +11,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 
 interface FormInputProps<T extends FieldValues = FieldValues> {
   name: Path<T>;
-  label: string;
+  label?: string;
   placeholder?: string;
   type?: "text" | "password" | "email";
   icon?: ReactNode;

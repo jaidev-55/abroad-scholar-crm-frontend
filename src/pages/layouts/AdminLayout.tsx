@@ -4,37 +4,14 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
-  // RiDashboardLine,
   RiKanbanView,
   RiUser3Line,
-  // RiUserFollowLine,
-  // RiUserUnfollowLine,
-  // RiUserSettingsLine,
-  // RiTaskLine,
-  // RiBarChartLine,
-  // RiFileTextLine,
-  // RiVisaLine,
-  // RiGraduationCapLine,
-  // RiLineChartLine,
-  // RiSettings3Line,
-  // RiLockPasswordLine,
   RiProfileLine,
   RiTeamLine,
   RiLineChartLine,
   RiDashboardLine,
-  // RiVisaLine,
-  // RiFileTextLine,
-  // RiGraduationCapLine,
-  // RiLockPasswordLine,
-  // RiSettings3Line,
-  // RiTaskLine,
-  // RiUserSettingsLine,
-  // RiTeamLine,
-  // RiBarChartLine,
-  // RiUserUnfollowLine,
-  // RiUserFollowLine,
-  // RiDashboardLine,
-  // RiTeamLine,
+  RiUserUnfollowLine,
+  RiLockPasswordLine,
 } from "react-icons/ri";
 import {
   AiOutlineMenu,
@@ -49,6 +26,14 @@ import { getCurrentUser } from "../../api/auth";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "../../components/common/notifications/NotificationBell";
 
+interface MenuItem {
+  id: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  href: string;
+  section?: string;
+}
+
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -58,7 +43,6 @@ const AdminLayout = () => {
   const { pathname } = useLocation();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
     queryFn: getCurrentUser,
@@ -76,25 +60,28 @@ const AdminLayout = () => {
     navigate("/login");
   };
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     // ───── MAIN ─────
     {
       id: "dashboard",
       icon: RiDashboardLine,
       label: "Dashboard",
       href: "/admin/dashboard",
+      section: "Main",
     },
     {
       id: "pipeline",
       icon: RiKanbanView,
       label: "Leads Pipeline",
       href: "/admin/leads-pipeline",
+      section: "Main",
     },
     {
       id: "all-leads",
       icon: RiUser3Line,
       label: "All Leads",
       href: "/admin/all-leads",
+      section: "Main",
     },
 
     // ───── LEAD MANAGEMENT ─────
@@ -103,18 +90,21 @@ const AdminLayout = () => {
     //   icon: RiUserFollowLine,
     //   label: "Follow-ups",
     //   href: "/admin/follow-ups",
+    //   section: "Lead Management",
     // },
-    // {
-    //   id: "lost-leads",
-    //   icon: RiUserUnfollowLine,
-    //   label: "Lost Leads",
-    //   href: "/admin/lost-leads",
-    // },
+    {
+      id: "lost-leads",
+      icon: RiUserUnfollowLine,
+      label: "Lost Leads",
+      href: "/admin/lost-leads",
+      section: "Lead Management",
+    },
     // {
     //   id: "lead-sources",
     //   icon: RiBarChartLine,
     //   label: "Lead Sources",
     //   href: "/admin/lead-sources",
+    //   section: "Lead Management",
     // },
 
     // ───── TEAM MANAGEMENT ─────
@@ -123,24 +113,28 @@ const AdminLayout = () => {
       icon: RiTeamLine,
       label: "Users",
       href: "/admin/users",
+      section: "Team",
     },
     // {
     //   id: "counselors",
     //   icon: RiUserSettingsLine,
     //   label: "Counselors",
     //   href: "/admin/counselors",
+    //   section: "Team",
     // },
     // {
     //   id: "tasks",
     //   icon: RiTaskLine,
     //   label: "Tasks",
     //   href: "/admin/tasks",
+    //   section: "Team",
     // },
     // {
     //   id: "performance",
     //   icon: RiLineChartLine,
     //   label: "Performance",
     //   href: "/admin/performance",
+    //   section: "Team",
     // },
 
     // ───── STUDENT PROCESS ─────
@@ -149,61 +143,112 @@ const AdminLayout = () => {
     //   icon: RiFileTextLine,
     //   label: "IELTS Tracking",
     //   href: "/admin/ielts",
+    //   section: "Student Process",
     // },
     // {
     //   id: "applications",
     //   icon: RiFileTextLine,
     //   label: "Applications",
     //   href: "/admin/applications",
+    //   section: "Student Process",
     // },
     // {
     //   id: "visa",
     //   icon: RiVisaLine,
     //   label: "Visa Processing",
     //   href: "/admin/visa",
+    //   section: "Student Process",
     // },
     // {
     //   id: "enrolled",
     //   icon: RiGraduationCapLine,
     //   label: "Enrolled Students",
     //   href: "/admin/enrolled",
+    //   section: "Student Process",
     // },
 
-    // ───── SETTINGS ─────
+    // ───── MARKETING ─────
     {
       id: "ad-integration",
       icon: RiLineChartLine,
       label: "Ad Integration",
       href: "/admin/ad-integration",
+      section: "Marketing",
     },
+    // {
+    //   id: "marketing-overview",
+    //   icon: RiMoneyDollarCircleLine,
+    //   label: "Spend & ROI",
+    //   href: "/admin/marketing/spend-roi",
+    //   section: "Marketing",
+    // },
+    // {
+    //   id: "lead-attribution",
+    //   icon: RiLinksLine,
+    //   label: "Lead Attribution",
+    //   href: "/admin/marketing/lead-attribution",
+    //   section: "Marketing",
+    // },
+    // {
+    //   id: "form-analytics",
+    //   icon: RiPieChartLine,
+    //   label: "Form Analytics",
+    //   href: "/admin/marketing/form-analytics",
+    //   section: "Marketing",
+    // },
+    // {
+    //   id: "campaign-comparison",
+    //   icon: RiBarChartBoxLine,
+    //   label: "Campaign Comparison",
+    //   href: "/admin/marketing/campaign-comparison",
+    //   section: "Marketing",
+    // },
+    // {
+    //   id: "sync-log",
+    //   icon: RiFileListLine,
+    //   label: "Sync Log",
+    //   href: "/admin/marketing/sync-log",
+    //   section: "Marketing",
+    // },
+    // {
+    //   id: "marketing-alerts",
+    //   icon: RiAlarmWarningLine,
+    //   label: "Alerts & Rules",
+    //   href: "/admin/marketing/alerts",
+    //   section: "Marketing",
+    // },
+
+    // ───── SETTINGS ─────
     // {
     //   id: "settings",
     //   icon: RiSettings3Line,
     //   label: "System Settings",
     //   href: "/admin/settings",
+    //   section: "Settings",
     // },
     {
       id: "profile",
       icon: RiProfileLine,
       label: "My Profile",
       href: "/admin/my-profile",
+      section: "Settings",
     },
-    // {
-    //   id: "change-password",
-    //   icon: RiLockPasswordLine,
-    //   label: "Change Password",
-    //   href: "/admin/change-password",
-    // },
+    {
+      id: "change-password",
+      icon: RiLockPasswordLine,
+      label: "Change Password",
+      href: "/admin/change-password",
+      section: "Settings",
+    },
   ];
 
   useEffect(() => {
     const activeItem = menuItems.find((item) => pathname.startsWith(item.href));
-
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (activeItem) setActiveMenu(activeItem.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Prevent background scroll when mobile sidebar open
   useEffect(() => {
     document.body.style.overflow = isMobileSidebarOpen ? "hidden" : "";
     return () => {
@@ -211,7 +256,6 @@ const AdminLayout = () => {
     };
   }, [isMobileSidebarOpen]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -221,7 +265,6 @@ const AdminLayout = () => {
         setIsProfileDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -231,6 +274,117 @@ const AdminLayout = () => {
   const dropdownVariants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
     visible: { opacity: 1, y: 0, scale: 1 },
+  };
+
+  // ─── Section header for desktop sidebar ───
+  const SectionHeader = ({
+    label,
+    collapsed,
+  }: {
+    label: string;
+    collapsed: boolean;
+  }) => (
+    <div
+      className={`flex items-center gap-2 mt-4 mb-1 ${
+        collapsed ? "justify-center px-2" : "px-4"
+      }`}
+    >
+      {collapsed ? (
+        <div className="w-5 h-px bg-gray-300" />
+      ) : (
+        <>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 whitespace-nowrap">
+            {label}
+          </span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </>
+      )}
+    </div>
+  );
+
+  // ─── Desktop menu renderer ───
+  const renderDesktopMenu = () => {
+    let lastSection: string | undefined;
+
+    return menuItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = activeMenu === item.id;
+      const showSection = item.section && item.section !== lastSection;
+      if (item.section) lastSection = item.section;
+
+      return (
+        <div key={item.id}>
+          {showSection && item.section !== "Main" && (
+            <SectionHeader label={item.section!} collapsed={!isSidebarOpen} />
+          )}
+          <Link
+            to={item.href}
+            className={`flex items-center ${
+              isSidebarOpen ? "justify-start px-4" : "justify-center"
+            } gap-3 py-2.5 mx-2 rounded-lg cursor-pointer text-left transition-all ${
+              isActive
+                ? "bg-blue-50 text-blue-500"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+            onClick={() => setActiveMenu(item.id)}
+          >
+            <Icon size={20} className="shrink-0" />
+            {isSidebarOpen && (
+              <span className="font-medium text-sm whitespace-nowrap truncate">
+                {item.label}
+              </span>
+            )}
+          </Link>
+        </div>
+      );
+    });
+  };
+
+  // ─── Mobile menu renderer ───
+  const renderMobileMenu = () => {
+    let lastSection: string | undefined;
+
+    return menuItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = activeMenu === item.id;
+      const showSection = item.section && item.section !== lastSection;
+      if (item.section) lastSection = item.section;
+
+      return (
+        <div key={item.id}>
+          {showSection && item.section !== "Main" && (
+            <div className="flex items-center gap-2 mt-4 mb-1 px-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 whitespace-nowrap">
+                {item.section}
+              </span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+          )}
+          <Link
+            to={item.href}
+            onClick={() => {
+              setActiveMenu(item.id);
+              setIsMobileSidebarOpen(false);
+            }}
+            className={`group flex items-center gap-3 p-2.5 sm:p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+              isActive
+                ? "bg-blue-50 text-blue-700 shadow-sm"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            }`}
+          >
+            <Icon
+              size={18}
+              className={`shrink-0 transition-colors duration-200 ${
+                isActive
+                  ? "text-blue-600"
+                  : "text-gray-400 group-hover:text-gray-700"
+              }`}
+            />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        </div>
+      );
+    });
   };
 
   return (
@@ -264,7 +418,7 @@ const AdminLayout = () => {
                 e.stopPropagation();
                 setIsSidebarOpen(!isSidebarOpen);
               }}
-              className="text-gray-600 cursor-pointer hover:text-ablue-500 shrink-0"
+              className="text-gray-600 cursor-pointer hover:text-blue-500 shrink-0"
             >
               <AiOutlineDoubleLeft size={18} />
             </button>
@@ -273,30 +427,7 @@ const AdminLayout = () => {
 
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.id}
-                to={item.href}
-                className={`flex items-center ${
-                  isSidebarOpen ? "justify-start px-4" : "justify-center"
-                } gap-3 py-2.5 mx-2 rounded-lg cursor-pointer text-left transition-all ${
-                  activeMenu === item.id
-                    ? "bg-blue-50 text-blue-500"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-                onClick={() => setActiveMenu(item.id)}
-              >
-                <Icon size={20} className="shrink-0" />
-                {isSidebarOpen && (
-                  <span className="font-medium text-sm whitespace-nowrap truncate">
-                    {item.label}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {renderDesktopMenu()}
         </nav>
 
         {/* Logout */}
@@ -325,7 +456,6 @@ const AdminLayout = () => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex lg:hidden"
           >
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -334,7 +464,6 @@ const AdminLayout = () => {
               onClick={() => setIsMobileSidebarOpen(false)}
             />
 
-            {/* Sidebar Panel */}
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -342,7 +471,6 @@ const AdminLayout = () => {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="relative w-64 sm:w-72 max-w-[85%] bg-white shadow-2xl flex flex-col h-full"
             >
-              {/* Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 min-h-[60px]">
                 <div
                   className="flex items-center gap-2 cursor-pointer"
@@ -366,41 +494,10 @@ const AdminLayout = () => {
                 </button>
               </div>
 
-              {/* Menu */}
               <nav className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeMenu === item.id;
-
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.href}
-                      onClick={() => {
-                        setActiveMenu(item.id);
-                        setIsMobileSidebarOpen(false);
-                      }}
-                      className={`group flex items-center gap-3 p-2.5 sm:p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-blue-50 text-blue-700 shadow-sm"
-                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                      }`}
-                    >
-                      <Icon
-                        size={18}
-                        className={`shrink-0 transition-colors duration-200 ${
-                          isActive
-                            ? "text-blue-600"
-                            : "text-gray-400 group-hover:text-gray-700"
-                        }`}
-                      />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                {renderMobileMenu()}
               </nav>
 
-              {/* Logout */}
               <div className="p-2 sm:p-3 border-t border-gray-100">
                 <button
                   onClick={() => {
@@ -424,10 +521,8 @@ const AdminLayout = () => {
           isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
         }`}
       >
-        {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
           <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2.5 sm:py-1.5 gap-2">
-            {/* Left Section */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -447,7 +542,6 @@ const AdminLayout = () => {
               </div>
             </div>
 
-            {/* Right Section - Profile */}
             <div className="flex items-center shrink-0">
               <NotificationBell />
               <div className="relative" ref={profileDropdownRef}>
@@ -475,7 +569,6 @@ const AdminLayout = () => {
                   />
                 </button>
 
-                {/* Dropdown Menu */}
                 <AnimatePresence>
                   {isProfileDropdownOpen && (
                     <motion.div
@@ -486,7 +579,6 @@ const AdminLayout = () => {
                       exit="hidden"
                       transition={{ duration: 0.2 }}
                     >
-                      {/* User Info Section */}
                       <div className="p-3 sm:p-4 bg-blue-50 border-b border-gray-100">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-sm shrink-0">
@@ -503,7 +595,6 @@ const AdminLayout = () => {
                         </div>
                       </div>
 
-                      {/* Menu Items */}
                       <div className="py-2">
                         <Link
                           to="/admin/my-profile"
@@ -513,27 +604,8 @@ const AdminLayout = () => {
                           <RiProfileLine className="w-5 h-5 shrink-0" />
                           <span className="font-medium">My Profile</span>
                         </Link>
-
-                        {/* <Link
-                          to="/admin/settings"
-                          className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          <RiSettings3Line className="w-5 h-5 shrink-0" />
-                          <span className="font-medium">System Settings</span>
-                        </Link> */}
-
-                        {/* <Link
-                          to="/admin/change-password"
-                          className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          <RiLockPasswordLine className="w-5 h-5 shrink-0" />
-                          <span className="font-medium">Change Password</span>
-                        </Link> */}
                       </div>
 
-                      {/* Logout Section */}
                       <div className="border-t border-gray-100 p-1.5 sm:p-2">
                         <button
                           onClick={() => {

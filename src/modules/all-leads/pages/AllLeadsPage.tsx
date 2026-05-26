@@ -258,7 +258,7 @@ const AllLeadsPage: React.FC = () => {
           onCategoryChange={setCategoryF}
           onPipelineStatusChange={(v) =>
             setPipelineStatusF(v as PipelineStatusApi | "")
-          } // ← new
+          }
           counselorUsers={counselorUsers}
           onExport={() => setExportModalOpen(true)}
           onSearchChange={setSearch}

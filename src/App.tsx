@@ -1,12 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./pages/layouts/AdminLayout";
-
 import EnrolledStudentsPage from "./pages/enrolled/page";
-import LostLeadsPage from "./pages/lost-leads/page";
+
 import CounselorsPage from "./pages/counselors/page";
 import AllFollowupsPage from "./pages/folllow-ups/page";
 import LeadSourcePage from "./pages/lead-source/page";
-import IeltsPage from "./pages/ielts/page";
 import TasksPage from "./pages/tasks/TasksPage";
 import LoginPage from "./pages/auth/Login";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
@@ -20,6 +18,15 @@ import UsersPage from "./modules/users/pages/UsersPage";
 import ProfilePage from "./modules/my-profile/pages/MyprofilePage";
 import AdIntegrationPage from "./modules/adIntegration/pages/AdIntegrationPage";
 import Dashboard from "./modules/dashboard/pages/Dashboard";
+import SpendRoiPage from "./modules/marketing/spend-roi/pages/SpendRoiPage";
+import FormAnalyticsPage from "./modules/marketing/form-analytics/pages/FormAnalyticsPage";
+import LeadAttributionPage from "./modules/marketing/lead-attribution/pages/Leadattributionpage";
+import CampaignComparisonPage from "./modules/marketing/campaign-comparison/pages/Campaigncomparisonpage";
+import MarketingAlertsPage from "./modules/marketing/alerts/pages/Marketingalertspage";
+import SyncLogPage from "./modules/marketing/sync-log/pages/Synclogpage";
+import SystemSettingsPage from "./modules/settings/pages/Systemsettingspage";
+import IeltsPage from "./modules/ielts/pages/Ieltspage";
+import LostLeadsPage from "./modules/lost-leads/page";
 
 const App = () => {
   return (
@@ -49,6 +56,24 @@ const App = () => {
           <Route path="ielts" element={<IeltsPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="users" element={<UsersPage />} />
+
+          {/* ───── Marketing Routes ───── */}
+          <Route path="marketing/spend-roi" element={<SpendRoiPage />} />
+          <Route
+            path="marketing/lead-attribution"
+            element={<LeadAttributionPage />}
+          />
+          <Route
+            path="marketing/form-analytics"
+            element={<FormAnalyticsPage />}
+          />
+          <Route
+            path="marketing/campaign-comparison"
+            element={<CampaignComparisonPage />}
+          />
+          <Route path="marketing/sync-log" element={<SyncLogPage />} />
+          <Route path="marketing/alerts" element={<MarketingAlertsPage />} />
+          <Route path="settings" element={<SystemSettingsPage />} />
         </Route>
 
         {/* 404 */}

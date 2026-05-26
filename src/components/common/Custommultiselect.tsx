@@ -9,7 +9,7 @@ import type {
 } from "react-hook-form";
 import type { ReactNode } from "react";
 
-interface CustomSelectProps<T extends FieldValues> {
+interface CustomMultiSelectProps<T extends FieldValues> {
   name: Path<T>;
   label?: string;
   placeholder?: string;
@@ -20,10 +20,12 @@ interface CustomSelectProps<T extends FieldValues> {
   control: Control<T>;
   errors: FieldErrors<T>;
   icon?: ReactNode;
-  onChange?: (v: string) => void;
+  onChange?: (v: string[]) => void;
+  maxCount?: number;
+  className?: string;
 }
 
-const CustomSelect = <T extends FieldValues>({
+const CustomMultiSelect = <T extends FieldValues>({
   name,
   label,
   placeholder,
@@ -35,13 +37,17 @@ const CustomSelect = <T extends FieldValues>({
   errors,
   icon,
   onChange,
-}: CustomSelectProps<T>) => {
+  maxCount,
+  className,
+}: CustomMultiSelectProps<T>) => {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-600">
-        {label}
-        {required && <span className="text-rose-400 ml-0.5">*</span>}
-      </label>
+    <div className={`flex flex-col gap-1.5 ${className || ""}`}>
+      {label && (
+        <label className="text-xs font-semibold text-slate-600">
+          {label}
+          {required && <span className="text-rose-400 ml-0.5">*</span>}
+        </label>
+      )}
 
       <div className="relative">
         {icon && (
@@ -58,19 +64,27 @@ const CustomSelect = <T extends FieldValues>({
             <>
               <Select
                 {...field}
-                value={field.value || undefined}
+                mode="multiple"
+                value={field.value || []}
                 placeholder={placeholder}
                 className="w-full"
                 size={size}
+                maxCount={maxCount}
                 onChange={(v) => {
                   field.onChange(v);
-                  if (v !== undefined) {
-                    onChange?.(v);
-                  }
+                  onChange?.(v);
                 }}
                 style={{ paddingLeft: icon ? 28 : undefined }}
                 status={errors[name] ? "error" : undefined}
                 options={options}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string)
+                    ?.toString()
+                    .toLowerCase()
+                    .includes(input.toLowerCase()) ?? false
+                }
+                maxTagCount="responsive"
               />
 
               {errors[name] && (
@@ -86,4 +100,4 @@ const CustomSelect = <T extends FieldValues>({
   );
 };
 
-export default CustomSelect;
+export default CustomMultiSelect;

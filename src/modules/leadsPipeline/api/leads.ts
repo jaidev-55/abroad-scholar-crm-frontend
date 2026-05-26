@@ -179,7 +179,7 @@ export type PipelineStatusApi =
 
 export interface LogCallPayload {
   outcome: CallOutcomeApi;
-  pipelineStatus?: PipelineStatusApi | null; // ← new
+  pipelineStatus?: PipelineStatusApi | null;
   notes?: string;
   duration: number;
   rating?: number | null;
@@ -189,7 +189,7 @@ export interface LogCallPayload {
 export interface LogCallResponse {
   id: string;
   outcome: CallOutcomeApi;
-  pipelineStatus?: PipelineStatusApi | null; // ← new
+  pipelineStatus?: PipelineStatusApi | null;
   notes?: string;
   duration: number;
   rating?: number | null;
@@ -222,7 +222,7 @@ export interface ApiCallLog {
     notes?: string;
     rating?: number;
     outcome?: CallOutcomeApi;
-    pipelineStatus?: PipelineStatusApi | null; // ← new
+    pipelineStatus?: PipelineStatusApi | null;
     duration?: number;
     followUpDate?: string | null;
   } | null;
