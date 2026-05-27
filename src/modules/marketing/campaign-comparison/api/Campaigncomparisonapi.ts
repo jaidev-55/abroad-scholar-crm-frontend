@@ -1,5 +1,6 @@
 import type { CampaignComparisonResponse } from "../types";
-import { mockCampaigns, mockTrend } from "../utils/campaignComparisonHelpers";
+import { mockCampaigns } from "../utils/campaignComparisonHelpers";
+
 
 export const getCampaignComparison =
   async (): Promise<CampaignComparisonResponse> => {

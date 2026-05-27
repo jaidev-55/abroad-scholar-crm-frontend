@@ -1,7 +1,8 @@
 import { RiMetaLine, RiGoogleLine, RiTrophyLine } from "react-icons/ri";
 import type { CampaignData } from "../types";
-import { formatValue } from "../utils/Campaigncomparisonhelpers";
+
 import { CAMPAIGN_COLORS, COMPARISON_METRICS } from "../utils/Constants";
+import { formatValue } from "../utils/campaignComparisonHelpers";
 
 
 interface Props {

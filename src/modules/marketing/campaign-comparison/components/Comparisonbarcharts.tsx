@@ -1,8 +1,9 @@
 import { useEffect, useRef, useMemo, useState } from "react";
 import * as echarts from "echarts";
 import type { CampaignData } from "../types";
-import { formatCurrency } from "../utils/Campaigncomparisonhelpers";
+
 import { CAMPAIGN_COLORS } from "../utils/Constants";
+import { formatCurrency } from "../utils/campaignComparisonHelpers";
 
 
 interface Props {
