@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import type { Lead } from "../types/lead";
 import CustomModal from "../../../components/common/CustomModal";
 import CustomSelect from "../../../components/common/CustomSelect";
+import { LOST_REASONS } from "../../lost-leads/constants/constant";
 
 type Priority = "Hot" | "Warm" | "Cold";
 
@@ -21,16 +22,7 @@ interface Props {
   onSave: (leadId: string, reason: string, notes: string) => void;
 }
 
-const LOST_REASONS = [
-  { value: "NO_RESPONSE", label: "No Response" },
-  { value: "NOT_INTERESTED", label: "Not Interested" },
-  { value: "FINANCIAL_ISSUE", label: "Financial Issue" },
-  { value: "CHOSE_OTHER_CONSULTANT", label: "Chose Another Agency" },
-  { value: "NOT_ELIGIBLE", label: "Not Eligible" },
-  { value: "DUPLICATE_LEAD", label: "Duplicate Lead" },
-  { value: "VISA_REJECTED", label: "Visa Rejected" },
-  { value: "OTHER", label: "Other" },
-];
+
 
 const PRIORITY_CONFIG: Record<
   Priority,

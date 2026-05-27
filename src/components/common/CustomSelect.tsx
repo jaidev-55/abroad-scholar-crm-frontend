@@ -9,11 +9,17 @@ import type {
 } from "react-hook-form";
 import type { ReactNode } from "react";
 
+export interface SelectOption {
+  value: string;
+  label: ReactNode;
+  icon?: ReactNode;
+}
+
 interface CustomSelectProps<T extends FieldValues> {
   name: Path<T>;
   label?: string;
   placeholder?: string;
-  options: { value: string; label: ReactNode }[];
+  options: SelectOption[];
   rules?: RegisterOptions<T>;
   required?: boolean;
   size?: "small" | "middle" | "large";
@@ -64,13 +70,31 @@ const CustomSelect = <T extends FieldValues>({
                 size={size}
                 onChange={(v) => {
                   field.onChange(v);
-                  if (v !== undefined) {
-                    onChange?.(v);
-                  }
+                  if (v !== undefined) onChange?.(v);
                 }}
                 style={{ paddingLeft: icon ? 28 : undefined }}
                 status={errors[name] ? "error" : undefined}
                 options={options}
+                optionRender={(opt) => {
+                  const o = opt.data as SelectOption;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      {o.icon && <span className="shrink-0">{o.icon}</span>}
+                      <span>{o.label}</span>
+                    </span>
+                  );
+                }}
+                labelRender={(opt) => {
+                  const o = options.find((x) => x.value === opt.value) as
+                    | SelectOption
+                    | undefined;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      {o?.icon && <span className="shrink-0">{o.icon}</span>}
+                      <span>{opt.label}</span>
+                    </span>
+                  );
+                }}
               />
 
               {errors[name] && (
