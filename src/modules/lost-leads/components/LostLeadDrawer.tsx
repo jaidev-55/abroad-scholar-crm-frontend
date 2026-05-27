@@ -10,12 +10,7 @@ import {
   RiCloseCircleLine,
   RiArrowGoBackLine,
 } from "react-icons/ri";
-import {
-  UserAvatar,
-  StageBadge,
-  LostReasonBadge,
-  PriorityBadge,
-} from "./Badges";
+import { UserAvatar, LostReasonBadge, PriorityBadge } from "./Badges";
 import { daysSince, formatDate } from "../utils";
 import type { LostLead } from "../types";
 
@@ -140,10 +135,7 @@ export const LostLeadDrawer: React.FC<LostLeadDrawerProps> = ({
                     label: "Priority",
                     content: <PriorityBadge priority={lead.priority} />,
                   },
-                  {
-                    label: "Pipeline Stage",
-                    content: <StageBadge stageId={lead.pipelineStatus} />,
-                  },
+
                   {
                     label: "Lost Date",
                     content: (
@@ -169,20 +161,6 @@ export const LostLeadDrawer: React.FC<LostLeadDrawerProps> = ({
                     content: (
                       <span className="text-[13px] font-bold text-slate-800">
                         {lead._count.callLogs}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: "Follow-up Date",
-                    content: (
-                      <span className="text-[13px] font-bold text-slate-800">
-                        {lead.followUpDate
-                          ? formatDate(lead.followUpDate, {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "—"}
                       </span>
                     ),
                   },
