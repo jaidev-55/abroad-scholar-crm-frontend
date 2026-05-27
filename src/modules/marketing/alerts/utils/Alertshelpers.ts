@@ -1,4 +1,5 @@
-import type { AlertStats, AlertRule, AlertLog, RuleTemplate } from "../types";
+import type { AlertLog, AlertRule, AlertStats, RuleTemplate } from "../types/Index";
+
 
 export const formatDateTime = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString("en-IN", {
