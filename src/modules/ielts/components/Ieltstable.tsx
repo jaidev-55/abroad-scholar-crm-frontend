@@ -1,11 +1,17 @@
 import React from "react";
 import { Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { RiEyeLine, RiPencilLine, RiArrowUpLine } from "react-icons/ri";
+import {
+  RiEyeLine,
+  RiPencilLine,
+  RiArrowUpLine,
+  RiDeleteBinLine,
+} from "react-icons/ri";
 import type { IeltsRecord } from "../api/ielts";
 import { daysUntilExam, formatDate } from "../utils/Helpers";
 import IeltsStatusTag from "./Ieltsstatustag";
 import ScoreBadge from "./Scorebadge";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 interface IeltsTableProps {
   data: IeltsRecord[];
@@ -21,8 +27,10 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
   loading,
   onView,
   onEdit,
+  onDelete,
   onUpdateScore,
 }) => {
+  const isAdmin = getIsAdmin();
   const columns: ColumnsType<IeltsRecord> = [
     {
       title: "Student",
@@ -79,7 +87,6 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
           }`}
         >
           {type === "ACADEMIC" ? "Academic" : "General"}{" "}
-          {/* ✅ API returns uppercase */}
         </span>
       ),
     },
@@ -126,7 +133,6 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
           target={record.targetL ?? null}
           size="sm"
         />
-        // ✅ was: record.currentScore?.listening / record.targetScore.listening
       ),
     },
     {
@@ -191,7 +197,6 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       render: (_: unknown, record: IeltsRecord) => (
         <span className="text-[12px] font-bold text-slate-500">
           {record.requiredScore?.toFixed(1) ?? "—"}{" "}
-          {/* ✅ was: targetScore.overall */}
         </span>
       ),
     },
@@ -222,10 +227,7 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "Counselor",
       key: "counselor",
       width: 100,
-      render: (
-        _: unknown,
-        record: IeltsRecord, // ✅ was: dataIndex counselor (flat string)
-      ) => (
+      render: (_: unknown, record: IeltsRecord) => (
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase shrink-0">
             {record.counselor?.name?.[0] ?? "?"}
@@ -246,10 +248,11 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
         <span className="text-[12px] font-medium text-slate-600">{val}</span>
       ),
     },
+
     {
       title: "Actions",
       key: "actions",
-      width: 90,
+      width: isAdmin ? 110 : 90,
       align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <div className="flex items-center justify-center gap-0">
@@ -277,6 +280,16 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
               <RiArrowUpLine size={14} className="text-blue-400" />
             </button>
           </Tooltip>
+          {isAdmin && (
+            <Tooltip title="Delete">
+              <button
+                onClick={() => onDelete?.(record)}
+                className="p-1 rounded-md hover:bg-red-50 transition-colors"
+              >
+                <RiDeleteBinLine size={14} className="text-red-400" />
+              </button>
+            </Tooltip>
+          )}
         </div>
       ),
     },

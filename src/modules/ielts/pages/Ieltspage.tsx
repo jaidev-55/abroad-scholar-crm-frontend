@@ -21,6 +21,7 @@ import {
 } from "../api/ielts";
 import { getUsers } from "../../../api/auth";
 import type { IeltsFilters } from "../Types";
+import IeltsDeleteModal from "../components/IeltsDeleteModal";
 
 const IeltsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -42,6 +43,13 @@ const IeltsPage: React.FC = () => {
   const [scoreOpen, setScoreOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<IeltsRecord | null>(null);
   const [addEditOpen, setAddEditOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    record: IeltsRecord | null;
+  }>({
+    open: false,
+    record: null,
+  });
 
   // ── Query params ──
   const query = {
@@ -125,12 +133,13 @@ const IeltsPage: React.FC = () => {
     },
   );
 
-  const { mutate: handleDelete } = useMutation({
+  const { mutate: handleDelete, isPending: isDeleting } = useMutation({
     mutationFn: (id: string) => deleteIelts(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ielts-list"] });
       queryClient.invalidateQueries({ queryKey: ["ielts-stats"] });
       message.success("Record deleted");
+      setDeleteModal({ open: false, record: null });
     },
     onError: () => message.error("Failed to delete record"),
   });
@@ -270,7 +279,7 @@ const IeltsPage: React.FC = () => {
             setScoreRecord(record);
             setScoreOpen(true);
           }}
-          onDelete={(record) => handleDelete(record.id)}
+          onDelete={(record) => setDeleteModal({ open: true, record })}
         />
 
         {/* ── Detail Drawer ── */}
@@ -294,7 +303,6 @@ const IeltsPage: React.FC = () => {
           />
         )}
 
-        {/* ── Add / Edit Modal ── */}
         {addEditOpen && (
           <AddEditIeltsModal
             open={addEditOpen}
@@ -312,6 +320,16 @@ const IeltsPage: React.FC = () => {
             studentOptions={[]}
           />
         )}
+
+        <IeltsDeleteModal
+          open={deleteModal.open}
+          record={deleteModal.record}
+          isLoading={isDeleting}
+          onClose={() => setDeleteModal({ open: false, record: null })}
+          onConfirm={() => {
+            if (deleteModal.record) handleDelete(deleteModal.record.id);
+          }}
+        />
       </div>
     </div>
   );

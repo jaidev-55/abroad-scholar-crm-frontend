@@ -45,7 +45,7 @@ const AllLeadsPage: React.FC = () => {
   const [categoryF, setCategoryF] = useState<string>("");
   const [pipelineStatusF, setPipelineStatusF] = useState<
     PipelineStatusApi | ""
-  >(""); // ← new
+  >("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -64,7 +64,6 @@ const AllLeadsPage: React.FC = () => {
   const today = new Date().toISOString().split("T")[0];
   const isAdmin = getIsAdmin();
 
-  // ── Data fetching ─────────────────────────────────────────────────────────
   const {
     data: rawLeads = [],
     isLoading,
@@ -79,7 +78,7 @@ const AllLeadsPage: React.FC = () => {
       priorityF,
       statusF,
       categoryF,
-      pipelineStatusF, // ← new
+      pipelineStatusF,
       dateRange?.[0]?.format("YYYY-MM-DD"),
       dateRange?.[1]?.format("YYYY-MM-DD"),
     ],
@@ -91,7 +90,7 @@ const AllLeadsPage: React.FC = () => {
         priority: priorityF || undefined,
         status: statusF || undefined,
         category: (categoryF as LeadCategory) || undefined,
-        pipelineStatus: (pipelineStatusF as PipelineStatusApi) || undefined, // ← new
+        pipelineStatus: (pipelineStatusF as PipelineStatusApi) || undefined,
         startDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         endDate: dateRange?.[1]
           ? dateRange[1].add(1, "day").format("YYYY-MM-DD")
