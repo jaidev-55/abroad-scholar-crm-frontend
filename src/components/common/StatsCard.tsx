@@ -1,3 +1,4 @@
+import React from "react";
 import type { IconType } from "react-icons";
 
 interface StatCardProps {
@@ -7,6 +8,7 @@ interface StatCardProps {
   twIconBg: string;
   twIconText: string;
   twBarBg: string;
+  isLoading?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -16,6 +18,7 @@ const StatCard: React.FC<StatCardProps> = ({
   twIconBg,
   twIconText,
   twBarBg,
+  isLoading,
 }) => {
   return (
     <div className="group bg-white rounded-2xl border border-slate-100 p-4 relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50 cursor-default w-full">
@@ -24,9 +27,14 @@ const StatCard: React.FC<StatCardProps> = ({
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 whitespace-nowrap">
             {label}
           </p>
-          <p className="text-2xl font-extrabold text-slate-900 leading-none tracking-tight">
-            {value}
-          </p>
+
+          {isLoading ? (
+            <div className="h-8 w-12 bg-slate-100 animate-pulse rounded-lg" />
+          ) : (
+            <p className="text-2xl font-extrabold text-slate-900 leading-none tracking-tight">
+              {value}
+            </p>
+          )}
         </div>
 
         <div

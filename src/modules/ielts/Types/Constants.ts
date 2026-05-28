@@ -1,31 +1,30 @@
 import type { IeltsStatus } from ".";
 
-
 export const IELTS_STATUS_CONFIG: Record<
   IeltsStatus,
   { tw: string; dot: string; label: string }
 > = {
-  "Not Started": {
+  NOT_STARTED: {
     tw: "bg-slate-50 text-slate-500",
     dot: "bg-slate-400",
     label: "Not Started",
   },
-  Preparing: {
+  PREPARING: {
     tw: "bg-amber-50 text-amber-600",
     dot: "bg-amber-400",
     label: "Preparing",
   },
-  Scheduled: {
+  SCHEDULED: {
     tw: "bg-blue-50 text-blue-600",
     dot: "bg-blue-400",
     label: "Scheduled",
   },
-  Completed: {
+  COMPLETED: {
     tw: "bg-emerald-50 text-emerald-600",
     dot: "bg-emerald-400",
     label: "Completed",
   },
-  Cancelled: {
+  CANCELLED: {
     tw: "bg-red-50 text-red-500",
     dot: "bg-red-400",
     label: "Cancelled",
@@ -48,30 +47,31 @@ export const getBandInfo = (score: number | null) => {
   return band ?? { label: "N/A", color: "#94a3b8" };
 };
 
-export const SCORE_OPTIONS = Array.from({ length: 19 }, (_, i) => {
-  const val = (i * 0.5).toFixed(1);
+//  IELTS scores range 1.0 - 9.0 in 0.5 steps (17 values)
+export const SCORE_OPTIONS = Array.from({ length: 17 }, (_, i) => {
+  const val = (1 + i * 0.5).toFixed(1);
   return { value: val, label: val };
 });
 
 export const EXAM_TYPE_OPTIONS = [
-  { value: "Academic", label: "Academic" },
-  { value: "General Training", label: "General Training" },
+  { value: "ACADEMIC", label: "Academic" },
+  { value: "GENERAL", label: "General" },
 ];
 
 export const STATUS_OPTIONS: { value: IeltsStatus | ""; label: string }[] = [
   { value: "", label: "All Statuses" },
-  { value: "Not Started", label: "Not Started" },
-  { value: "Preparing", label: "Preparing" },
-  { value: "Scheduled", label: "Scheduled" },
-  { value: "Completed", label: "Completed" },
-  { value: "Cancelled", label: "Cancelled" },
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "PREPARING", label: "Preparing" },
+  { value: "SCHEDULED", label: "Scheduled" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 export const MODULE_LABELS = [
-  { key: "listening", label: "Listening", icon: "🎧" },
-  { key: "reading", label: "Reading", icon: "📖" },
-  { key: "writing", label: "Writing", icon: "✍️" },
-  { key: "speaking", label: "Speaking", icon: "🎤" },
+  { key: "listening", label: "Listening", icon: "listening" },
+  { key: "reading", label: "Reading", icon: "reading" },
+  { key: "writing", label: "Writing", icon: "writing" },
+  { key: "speaking", label: "Speaking", icon: "speaking" },
 ] as const;
 
 export const COUNTRY_OPTIONS = [

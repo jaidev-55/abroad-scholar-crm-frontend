@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { Drawer } from "antd";
 import * as echarts from "echarts";
 import {
@@ -8,13 +8,18 @@ import {
   RiGlobalLine,
   RiFileTextLine,
   RiCloseLine,
+  RiTrophyLine,
+  RiHeadphoneLine,
+  RiBook2Line,
+  RiEditLine,
+  RiMicLine,
 } from "react-icons/ri";
-import type { IeltsRecord } from "../Types";
 import { MODULE_LABELS } from "../Types/Constants";
-import { daysUntilExam, meetsTarget, formatDate } from "../utils/Helpers";
+import { daysUntilExam, formatDate } from "../utils/Helpers";
 import IeltsStatusTag from "./Ieltsstatustag";
 import ScoreBadge from "./Scorebadge";
 import ScoreProgress from "./Scoreprogress";
+import type { IeltsRecord } from "../api/ielts";
 
 interface DetailDrawerProps {
   open: boolean;
@@ -29,12 +34,10 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
-  const [drawerReady, setDrawerReady] = useState(false);
 
   const buildChart = useCallback(() => {
     if (!chartRef.current || !record) return;
 
-    // Dispose old instance
     if (chartInstance.current) {
       chartInstance.current.dispose();
       chartInstance.current = null;
@@ -45,10 +48,18 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
     });
     chartInstance.current = chart;
 
-    const modules = ["listening", "reading", "writing", "speaking"] as const;
-    const moduleLabels = ["Listening", "Reading", "Writing", "Speaking"];
-    const currentScores = modules.map((m) => record.currentScore?.[m] ?? 0);
-    const targetScores = modules.map((m) => record.targetScore[m]);
+    const currentScores = [
+      record.currentL ?? 0,
+      record.currentR ?? 0,
+      record.currentW ?? 0,
+      record.currentS ?? 0,
+    ];
+    const targetScores = [
+      record.targetL ?? 0,
+      record.targetR ?? 0,
+      record.targetW ?? 0,
+      record.targetS ?? 0,
+    ];
 
     chart.setOption({
       tooltip: {
@@ -66,16 +77,10 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
         textStyle: { fontSize: 11, color: "#94a3b8" },
         itemGap: 20,
       },
-      grid: {
-        left: 10,
-        right: 10,
-        top: 15,
-        bottom: 40,
-        containLabel: true,
-      },
+      grid: { left: 10, right: 10, top: 15, bottom: 40, containLabel: true },
       xAxis: {
         type: "category",
-        data: moduleLabels,
+        data: ["Listening", "Reading", "Writing", "Speaking"],
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: { fontSize: 11, color: "#64748b", fontWeight: 600 },
@@ -87,9 +92,7 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
         interval: 1.5,
         axisLine: { show: false },
         axisTick: { show: false },
-        splitLine: {
-          lineStyle: { color: "#f1f5f9", type: "dashed" },
-        },
+        splitLine: { lineStyle: { color: "#f1f5f9", type: "dashed" } },
         axisLabel: {
           fontSize: 10,
           color: "#94a3b8",
@@ -136,7 +139,8 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
             position: "top",
             fontSize: 10,
             color: "#ef4444",
-            formatter: (p: { value: number }) => p.value.toFixed(1),
+            formatter: (p: { value: number }) =>
+              p.value > 0 ? p.value.toFixed(1) : "",
           },
         },
       ],
@@ -147,41 +151,45 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
 
     const handleResize = () => chart.resize();
     window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => window.removeEventListener("resize", handleResize);
   }, [record]);
 
-  // Build chart once drawer animation finishes AND we have a record
   useEffect(() => {
-    if (drawerReady && record) {
+    if (!open || !record) return;
+    const timer = setTimeout(() => {
       buildChart();
-    }
-  }, [drawerReady, record, buildChart]);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [open, record, buildChart]);
 
-  // Reset drawerReady when closed
   useEffect(() => {
     if (!open) {
-      setDrawerReady(false);
-      if (chartInstance.current) {
-        chartInstance.current.dispose();
-        chartInstance.current = null;
-      }
+      chartInstance.current?.dispose();
+      chartInstance.current = null;
     }
   }, [open]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       chartInstance.current?.dispose();
-    };
-  }, []);
+    },
+    [],
+  );
 
   if (!record) return null;
 
-  const days = daysUntilExam(record.examDate);
-  const targetMet = meetsTarget(record.currentScore, record.targetScore);
+  const days = daysUntilExam(record.examDate ?? null);
+  const targetMet =
+    record.currentOA != null &&
+    record.requiredScore != null &&
+    record.currentOA >= record.requiredScore;
+
+  const MODULE_ICON_MAP: Record<string, React.ReactNode> = {
+    listening: <RiHeadphoneLine size={13} />,
+    reading: <RiBook2Line size={13} />,
+    writing: <RiEditLine size={13} />,
+    speaking: <RiMicLine size={13} />,
+  };
 
   return (
     <Drawer
@@ -190,15 +198,10 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
       width={460}
       closable={false}
       styles={{ body: { padding: 0 } }}
-      afterOpenChange={(visible) => {
-        if (visible) {
-          setDrawerReady(true);
-        }
-      }}
     >
       <div className="flex flex-col h-full">
-        {/* ── Header ── */}
-        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 px-6 py-5 text-white relative">
+        {/* Header */}
+        <div className="bg-blue-500 px-6 py-5 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
@@ -219,7 +222,8 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
                 {record.studentName}
               </h2>
               <p className="text-blue-100 text-[13px] mt-0.5">
-                {record.country} · {record.examType}
+                {record.country} ·{" "}
+                {record.examType === "ACADEMIC" ? "Academic" : "General"}
               </p>
             </div>
           </div>
@@ -240,41 +244,40 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
               </span>
             )}
             {targetMet && (
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-100">
-                🎯 Target Met
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-100 flex items-center gap-1">
+                <RiTrophyLine size={11} /> Target Met
               </span>
             )}
           </div>
         </div>
 
-        {/* ── Body ── */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Quick Info Grid */}
           <div className="grid grid-cols-2 gap-2.5">
             <InfoItem
               icon={<RiCalendarLine size={14} />}
               label="Exam Date"
-              value={formatDate(record.examDate)}
+              value={formatDate(record.examDate ?? null)}
             />
             <InfoItem
               icon={<RiUser3Line size={14} />}
               label="Counselor"
-              value={record.counselor}
+              value={record.counselor?.name ?? "Unassigned"}
             />
             <InfoItem
               icon={<RiGraduationCapLine size={14} />}
               label="University"
-              value={record.university || "—"}
+              value={record.targetUniversity ?? "—"}
             />
             <InfoItem
               icon={<RiGlobalLine size={14} />}
               label="Required Score"
-              value={record.requiredScore?.toString() || "—"}
+              value={record.requiredScore?.toString() ?? "—"}
             />
             <InfoItem
               icon={<RiFileTextLine size={14} />}
               label="Registration ID"
-              value={record.registrationId || "—"}
+              value={record.registrationId ?? "—"}
             />
             <InfoItem
               icon={<RiGraduationCapLine size={14} />}
@@ -285,7 +288,6 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
 
           <div className="h-px bg-slate-100" />
 
-          {/* ── ECharts Bar Chart ── */}
           <div>
             <h3 className="text-[13px] font-bold text-slate-700 mb-2">
               Score Overview
@@ -297,50 +299,66 @@ const IeltsDetailDrawer: React.FC<DetailDrawerProps> = ({
 
           <div className="h-px bg-slate-100" />
 
-          {/* Module Progress Bars */}
           <div>
             <h3 className="text-[13px] font-bold text-slate-700 mb-3">
               Module Breakdown
             </h3>
             <div className="space-y-4">
-              {MODULE_LABELS.map((mod) => (
-                <ScoreProgress
-                  key={mod.key}
-                  label={mod.label}
-                  icon={mod.icon}
-                  current={
-                    record.currentScore?.[
-                      mod.key as keyof typeof record.currentScore
-                    ] ?? null
-                  }
-                  target={
-                    record.targetScore[
-                      mod.key as keyof typeof record.targetScore
-                    ]
-                  }
-                />
-              ))}
+              {MODULE_LABELS.map((mod) => {
+                const current =
+                  mod.key === "listening"
+                    ? record.currentL
+                    : mod.key === "reading"
+                      ? record.currentR
+                      : mod.key === "writing"
+                        ? record.currentW
+                        : mod.key === "speaking"
+                          ? record.currentS
+                          : null;
+
+                const target =
+                  mod.key === "listening"
+                    ? record.targetL
+                    : mod.key === "reading"
+                      ? record.targetR
+                      : mod.key === "writing"
+                        ? record.targetW
+                        : mod.key === "speaking"
+                          ? record.targetS
+                          : null;
+
+                return (
+                  <ScoreProgress
+                    key={mod.key}
+                    label={mod.label}
+                    icon={MODULE_ICON_MAP[mod.icon]}
+                    current={current ?? null}
+                    target={target ?? null}
+                  />
+                );
+              })}
             </div>
 
-            {/* Overall */}
             <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-[13px] font-bold text-slate-600">
                 Overall Band
               </span>
               <div className="flex items-center gap-3">
                 <ScoreBadge
-                  score={record.currentScore?.overall ?? null}
+                  score={record.currentOA ?? null}
                   size="lg"
                   showBand
                 />
                 <span className="text-[11px] text-slate-400">
-                  Target: {record.targetScore.overall.toFixed(1)}
+                  Target:{" "}
+                  {record.targetOA?.toFixed(1) ??
+                    record.requiredScore?.toFixed(1) ??
+                    "—"}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Notes */}
           {record.notes && (
             <>
               <div className="h-px bg-slate-100" />

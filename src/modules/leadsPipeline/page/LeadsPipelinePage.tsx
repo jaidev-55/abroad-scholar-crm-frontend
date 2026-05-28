@@ -58,7 +58,7 @@ const LeadsPipelinePage = () => {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<
     PipelineStatusApi | ""
-  >(""); // ← new
+  >("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalDefaultStage, setAddModalDefaultStage] = useState<string>();
@@ -120,7 +120,6 @@ const LeadsPipelinePage = () => {
 
   const leads: Lead[] = useMemo(() => rawLeads.map(apiLeadToLocal), [rawLeads]);
 
-  // counselor + category filtered client-side (no API param needed)
   const filteredLeads = useMemo(() => {
     let list = leads;
     if (counselorFilter)
@@ -306,7 +305,7 @@ const LeadsPipelinePage = () => {
     setCountryFilter("");
     setPriorityFilter("");
     setCategoryFilter("");
-    setPipelineStatusFilter(""); // ← new
+    setPipelineStatusFilter("");
     setDateRange(null);
   };
 
@@ -317,7 +316,7 @@ const LeadsPipelinePage = () => {
     countryFilter ||
     priorityFilter ||
     categoryFilter ||
-    pipelineStatusFilter || // ← new
+    pipelineStatusFilter ||
     dateRange
   );
 
@@ -387,7 +386,7 @@ const LeadsPipelinePage = () => {
           onCategoryChange={setCategoryFilter}
           onPipelineStatusChange={(v) =>
             setPipelineStatusFilter(v as PipelineStatusApi | "")
-          } // ← new
+          }
           onDateRangeChange={(v: DateRangeValue) => setDateRange(v)}
         />
 

@@ -20,6 +20,9 @@ import {
   RiAddLine,
   RiDeleteBinLine,
   RiBookOpenLine,
+  RiFireLine,
+  RiSnowflakeLine,
+  RiThunderstormsLine,
 } from "react-icons/ri";
 import type { Dayjs } from "dayjs";
 import type { Lead, LeadStage } from "../types/lead";
@@ -107,21 +110,21 @@ const STAGES = [
 
 const PRIORITY_CONFIG = {
   Hot: {
-    icon: "🔥",
+    icon: <RiFireLine size={14} />,
     color: "#ef4444",
     bg: "#fff5f5",
     border: "#fed7d7",
     apiValue: "HOT",
   },
   Warm: {
-    icon: "⚡",
+    icon: <RiThunderstormsLine size={14} />,
     color: "#f59e0b",
     bg: "#fffbeb",
     border: "#fde68a",
     apiValue: "WARM",
   },
   Cold: {
-    icon: "❄️",
+    icon: <RiSnowflakeLine size={14} />,
     color: "#3b82f6",
     bg: "#eff6ff",
     border: "#bfdbfe",
@@ -334,7 +337,6 @@ const LeadModal: React.FC<Props> = ({
       {
         onSuccess: (res) => {
           const now = new Date().toISOString();
-
           const newLead: Lead = {
             id: res.id ?? `lead-${Date.now()}`,
             name: res.fullName,
@@ -358,6 +360,7 @@ const LeadModal: React.FC<Props> = ({
             })),
             createdAt: now.split("T")[0],
             updatedAt: now.split("T")[0],
+            counselorId: "",
           };
 
           message.success("Lead added successfully!");
@@ -541,20 +544,26 @@ const LeadModal: React.FC<Props> = ({
                   <div className="grid grid-cols-3 gap-2">
                     {(["Hot", "Warm", "Cold"] as const).map((p) => {
                       const cfg = PRIORITY_CONFIG[p];
+                      const active = field.value === p;
                       return (
                         <button
                           key={p}
                           type="button"
                           onClick={() => field.onChange(p)}
-                          className="px-3 py-2.5 rounded-xl text-[13px] font-bold border-2 cursor-pointer outline-none transition-all"
+                          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-bold border-2 cursor-pointer outline-none transition-all"
                           style={{
-                            background: field.value === p ? cfg.bg : "#f8fafc",
-                            color: field.value === p ? cfg.color : "#94a3b8",
-                            borderColor:
-                              field.value === p ? cfg.border : "#e2e8f0",
+                            background: active ? cfg.bg : "#f8fafc",
+                            color: active ? cfg.color : "#94a3b8",
+                            borderColor: active ? cfg.border : "#e2e8f0",
                           }}
                         >
-                          {cfg.icon} {p}
+                          <span
+                            className="flex items-center"
+                            style={{ color: active ? cfg.color : "#94a3b8" }}
+                          >
+                            {cfg.icon}
+                          </span>
+                          {p}
                         </button>
                       );
                     })}
@@ -816,7 +825,7 @@ const LeadModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-bold border-none bg-blue-600 text-white cursor-pointer outline-none hover:bg-blue-700 transition-all"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-bold border-none bg-blue-500 text-white cursor-pointer outline-none hover:bg-blue-600 transition-all"
             >
               Continue <RiArrowRightLine size={14} />
             </button>

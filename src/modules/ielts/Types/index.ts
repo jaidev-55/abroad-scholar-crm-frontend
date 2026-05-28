@@ -1,9 +1,9 @@
 export type IeltsStatus =
-  | "Not Started"
-  | "Preparing"
-  | "Scheduled"
-  | "Completed"
-  | "Cancelled";
+  | "NOT_STARTED"
+  | "PREPARING"
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface IeltsScore {
   listening: number | null;
@@ -43,12 +43,11 @@ export interface IeltsRecord {
 
 export interface IeltsFilters {
   search: string;
-  status: IeltsStatus | "";
+  status: string;
   counselor: string;
   country: string;
   examType: string;
 }
-
 export interface IeltsStatsData {
   totalStudents: number;
   preparing: number;

@@ -3,9 +3,9 @@ import { getBandInfo } from "../Types/Constants";
 
 interface ScoreProgressProps {
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   current: number | null;
-  target: number;
+  target: number | null;
 }
 
 const ScoreProgress: React.FC<ScoreProgressProps> = ({
@@ -15,8 +15,8 @@ const ScoreProgress: React.FC<ScoreProgressProps> = ({
   target,
 }) => {
   const pct = current !== null ? Math.min((current / 9) * 100, 100) : 0;
-  const targetPct = (target / 9) * 100;
-  const met = current !== null && current >= target;
+  const targetPct = target !== null ? (target / 9) * 100 : 0;
+  const met = current !== null && target !== null && current >= target;
   const band = getBandInfo(current);
 
   return (
@@ -31,7 +31,7 @@ const ScoreProgress: React.FC<ScoreProgressProps> = ({
             {current !== null ? current.toFixed(1) : "—"}
           </span>
           <span className="text-[10px] text-slate-400">
-            / {target.toFixed(1)}
+            / {target !== null ? target.toFixed(1) : "—"}
           </span>
         </div>
       </div>
@@ -44,10 +44,12 @@ const ScoreProgress: React.FC<ScoreProgressProps> = ({
             backgroundColor: met ? "#10b981" : band.color,
           }}
         />
-        <div
-          className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-red-400 rounded-full"
-          style={{ left: `${targetPct}%` }}
-        />
+        {target !== null && (
+          <div
+            className="absolute top-[-3px] bottom-[-3px] w-0.5 bg-red-400 rounded-full"
+            style={{ left: `${targetPct}%` }}
+          />
+        )}
       </div>
     </div>
   );

@@ -64,37 +64,24 @@ const CustomSelect = <T extends FieldValues>({
             <>
               <Select
                 {...field}
-                value={field.value || undefined}
+                value={
+                  field.value !== "" &&
+                  field.value !== null &&
+                  field.value !== undefined
+                    ? field.value
+                    : undefined
+                } //
                 placeholder={placeholder}
                 className="w-full"
                 size={size}
                 onChange={(v) => {
-                  field.onChange(v);
+                  field.onChange(v ?? "");
                   if (v !== undefined) onChange?.(v);
                 }}
+                allowClear
                 style={{ paddingLeft: icon ? 28 : undefined }}
                 status={errors[name] ? "error" : undefined}
                 options={options}
-                optionRender={(opt) => {
-                  const o = opt.data as SelectOption;
-                  return (
-                    <span className="flex items-center gap-1.5">
-                      {o.icon && <span className="shrink-0">{o.icon}</span>}
-                      <span>{o.label}</span>
-                    </span>
-                  );
-                }}
-                labelRender={(opt) => {
-                  const o = options.find((x) => x.value === opt.value) as
-                    | SelectOption
-                    | undefined;
-                  return (
-                    <span className="flex items-center gap-1.5">
-                      {o?.icon && <span className="shrink-0">{o.icon}</span>}
-                      <span>{opt.label}</span>
-                    </span>
-                  );
-                }}
               />
 
               {errors[name] && (

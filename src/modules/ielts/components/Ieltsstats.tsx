@@ -1,15 +1,27 @@
 import React from "react";
-import { RiGroupLine, RiBookOpenLine, RiCalendarScheduleLine, RiCheckboxCircleLine, RiLineChartLine, RiTrophyLine, RiTimeLine, RiAlertLine } from "react-icons/ri";
-
-import type { IeltsStatsData } from "../Types";
+import {
+  RiGroupLine,
+  RiBookOpenLine,
+  RiCalendarScheduleLine,
+  RiCheckboxCircleLine,
+  RiLineChartLine,
+  RiTrophyLine,
+  RiTimeLine,
+  RiAlertLine,
+} from "react-icons/ri";
 import StatCard from "../../../components/common/StatsCard";
+import type { IeltsStats as IeltsStatsType } from "../api/ielts";
 
+interface IeltsStatsProps {
+  stats?: IeltsStatsType;
+  isLoading?: boolean;
+}
 
-const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
+const IeltsStats: React.FC<IeltsStatsProps> = ({ stats, isLoading }) => {
   const cards = [
     {
       label: "Total Students",
-      value: stats.totalStudents,
+      value: stats?.total ?? 0,
       icon: RiGroupLine,
       twIconBg: "bg-blue-50",
       twIconText: "text-blue-500",
@@ -17,7 +29,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Preparing",
-      value: stats.preparing,
+      value: stats?.preparing ?? 0,
       icon: RiBookOpenLine,
       twIconBg: "bg-amber-50",
       twIconText: "text-amber-500",
@@ -25,7 +37,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Scheduled",
-      value: stats.scheduled,
+      value: stats?.scheduled ?? 0,
       icon: RiCalendarScheduleLine,
       twIconBg: "bg-indigo-50",
       twIconText: "text-indigo-500",
@@ -33,7 +45,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Completed",
-      value: stats.completed,
+      value: stats?.completed ?? 0,
       icon: RiCheckboxCircleLine,
       twIconBg: "bg-emerald-50",
       twIconText: "text-emerald-500",
@@ -41,7 +53,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Avg. Score",
-      value: stats.avgOverallScore,
+      value: stats?.avgScore ?? 0,
       icon: RiLineChartLine,
       twIconBg: "bg-purple-50",
       twIconText: "text-purple-500",
@@ -49,7 +61,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Target Met",
-      value: stats.targetMet,
+      value: stats?.targetMet ?? 0,
       icon: RiTrophyLine,
       twIconBg: "bg-green-50",
       twIconText: "text-green-500",
@@ -57,7 +69,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Upcoming Exams",
-      value: stats.upcomingExams,
+      value: stats?.upcomingExams ?? 0,
       icon: RiTimeLine,
       twIconBg: "bg-cyan-50",
       twIconText: "text-cyan-500",
@@ -65,7 +77,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
     },
     {
       label: "Not Started",
-      value: stats.notStarted,
+      value: stats?.notStarted ?? 0,
       icon: RiAlertLine,
       twIconBg: "bg-slate-50",
       twIconText: "text-slate-400",
@@ -76,7 +88,7 @@ const IeltsStats: React.FC<{ stats: IeltsStatsData }> = ({ stats }) => {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
       {cards.map((c) => (
-        <StatCard key={c.label} {...c} />
+        <StatCard key={c.label} {...c} isLoading={isLoading} />
       ))}
     </div>
   );

@@ -51,7 +51,7 @@ const PipelineHeader: React.FC<PipelineHeaderProps> = ({
         {/* Add Lead button */}
         <button
           onClick={onAddLead}
-          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors cursor-pointer shadow-sm shadow-blue-200"
+          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors cursor-pointer shadow-sm shadow-blue-200"
         >
           <RiAddLine size={16} />
           Add Lead

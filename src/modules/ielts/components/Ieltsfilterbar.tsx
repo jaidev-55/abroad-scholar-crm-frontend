@@ -1,9 +1,17 @@
 import React, { useState } from "react";
-import { Input, Select } from "antd";
+import { useForm } from "react-hook-form";
 import { RiSearchLine, RiFilter3Line, RiArrowUpSLine } from "react-icons/ri";
-import type { IeltsFilters } from "../Types";
-import { STATUS_OPTIONS, COUNTRY_OPTIONS } from "../Types/Constants";
+import CustomInput from "../../../components/common/CustomInput";
+import CustomSelect from "../../../components/common/CustomSelect";
+import { STATUS_OPTIONS, EXAM_TYPE_OPTIONS } from "../Types/Constants";
 
+interface IeltsFilters {
+  search: string;
+  status: string;
+  counselor: string;
+  country: string;
+  examType: string;
+}
 
 interface FilterBarProps {
   filters: IeltsFilters;
@@ -21,6 +29,13 @@ const IeltsFilterBar: React.FC<FilterBarProps> = ({
   filteredCount,
 }) => {
   const [open, setOpen] = useState(true);
+
+  const {
+    control,
+    formState: { errors },
+  } = useForm<IeltsFilters>({
+    defaultValues: filters,
+  });
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
@@ -41,99 +56,58 @@ const IeltsFilterBar: React.FC<FilterBarProps> = ({
           </span>
           <RiArrowUpSLine
             size={16}
-            className={`text-slate-400 transition-transform duration-200 ${
-              open ? "" : "rotate-180"
-            }`}
+            className={`text-slate-400 transition-transform duration-200 ${open ? "" : "rotate-180"}`}
           />
         </div>
       </button>
 
-      {/* Filter fields */}
       {open && (
         <div className="px-5 pb-4 pt-1 border-t border-slate-50">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* Search */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Search
-              </label>
-              <Input
-                prefix={<RiSearchLine size={14} className="text-slate-300" />}
-                placeholder="Student name..."
-                size="middle"
-                value={filters.search}
-                onChange={(e) => onFilterChange("search", e.target.value)}
-                allowClear
-                className="rounded-lg"
-              />
-            </div>
+            <CustomInput
+              name="search"
+              label="Search"
+              placeholder="Student name..."
+              control={control}
+              icon={<RiSearchLine size={14} className="text-slate-300" />}
+              onChange={(e) => onFilterChange("search", e.target.value)}
+            />
 
-            {/* Status */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Status
-              </label>
-              <Select
-                className="w-full"
-                size="middle"
-                value={filters.status}
-                onChange={(v) => onFilterChange("status", v)}
-                options={STATUS_OPTIONS}
-                placeholder="All Statuses"
-              />
-            </div>
+            <CustomSelect
+              name="status"
+              label="Status"
+              placeholder="All Statuses"
+              control={control}
+              errors={errors}
+              options={STATUS_OPTIONS}
+              onChange={(v) => onFilterChange("status", v ?? "")}
+            />
 
-            {/* Counselor */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Counselor
-              </label>
-              <Select
-                className="w-full"
-                size="middle"
-                value={filters.counselor}
-                onChange={(v) => onFilterChange("counselor", v)}
-                options={[
-                  { value: "", label: "All Counselors" },
-                  ...counselorOptions,
-                ]}
-                placeholder="All Counselors"
-              />
-            </div>
+            <CustomSelect
+              name="counselor"
+              label="Counselor"
+              placeholder="All Counselors"
+              control={control}
+              errors={errors}
+              options={[
+                { value: "", label: "All Counselors" },
+                ...counselorOptions,
+              ]}
+              onChange={(v) => onFilterChange("counselor", v ?? "")}
+            />
 
-            {/* Country */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Country
-              </label>
-              <Select
-                className="w-full"
-                size="middle"
-                value={filters.country}
-                onChange={(v) => onFilterChange("country", v)}
-                options={COUNTRY_OPTIONS}
-                placeholder="All Countries"
-              />
-            </div>
-
-            {/* Exam Type */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                Exam Type
-              </label>
-              <Select
-                className="w-full"
-                size="middle"
-                value={filters.examType}
-                onChange={(v) => onFilterChange("examType", v)}
-                options={[
-                  { value: "", label: "All Types" },
-                  { value: "Academic", label: "Academic" },
-                  { value: "General Training", label: "General Training" },
-                ]}
-                placeholder="All Types"
-              />
-            </div>
+            <CustomSelect
+              name="examType"
+              label="Exam Type"
+              placeholder="All Types"
+              options={[
+                { value: "", label: "All Types" },
+                ...EXAM_TYPE_OPTIONS,
+              ]}
+              control={control}
+              errors={errors}
+              onChange={(v) => onFilterChange("examType", v ?? "")}
+            />
           </div>
         </div>
       )}

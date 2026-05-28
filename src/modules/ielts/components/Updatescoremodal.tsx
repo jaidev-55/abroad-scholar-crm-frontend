@@ -1,26 +1,28 @@
 import React from "react";
-import { Select } from "antd";
+import { Select, Spin } from "antd";
 import { useForm, Controller } from "react-hook-form";
 import CustomModal from "../../../components/common/CustomModal";
 import CustomTextarea from "../../../components/common/Customtextarea";
-import type { IeltsRecord } from "../Types";
+import type { IeltsRecord, UpdateScoresPayload } from "../api/ielts";
 import { MODULE_LABELS, SCORE_OPTIONS } from "../Types/Constants";
 import { calcOverall } from "../utils/Helpers";
+import { RiArrowUpCircleLine, RiCloseLine } from "react-icons/ri";
+
+interface ScoreFormData {
+  listening: string;
+  reading: string;
+  writing: string;
+  speaking: string;
+  testType: "OFFICIAL_EXAM" | "MOCK_TEST" | "PRACTICE";
+  notes: string;
+}
 
 interface UpdateScoreModalProps {
   open: boolean;
   record: IeltsRecord | null;
   onClose: () => void;
-  onSubmit: (data: ScoreFormData) => void;
-}
-
-export interface ScoreFormData {
-  listening: string;
-  reading: string;
-  writing: string;
-  speaking: string;
-  testType: string;
-  notes: string;
+  onSubmit: (payload: UpdateScoresPayload) => void;
+  isLoading?: boolean;
 }
 
 const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
@@ -28,18 +30,20 @@ const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
   record,
   onClose,
   onSubmit,
+  isLoading,
 }) => {
   const { control, handleSubmit, watch } = useForm<ScoreFormData>({
     defaultValues: {
-      listening: record?.currentScore?.listening?.toString() ?? "",
-      reading: record?.currentScore?.reading?.toString() ?? "",
-      writing: record?.currentScore?.writing?.toString() ?? "",
-      speaking: record?.currentScore?.speaking?.toString() ?? "",
-      testType: "Official",
+      listening: record?.currentL?.toString() ?? "",
+      reading: record?.currentR?.toString() ?? "",
+      writing: record?.currentW?.toString() ?? "",
+      speaking: record?.currentS?.toString() ?? "",
+      testType: "OFFICIAL_EXAM",
       notes: "",
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const vals = watch(["listening", "reading", "writing", "speaking"]);
   const overall = calcOverall(
     vals[0] ? parseFloat(vals[0]) : null,
@@ -48,28 +52,54 @@ const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
     vals[3] ? parseFloat(vals[3]) : null,
   );
 
+  const handleFormSubmit = (data: ScoreFormData) => {
+    const payload: UpdateScoresPayload = {
+      listening: data.listening ? parseFloat(data.listening) : undefined,
+      reading: data.reading ? parseFloat(data.reading) : undefined,
+      writing: data.writing ? parseFloat(data.writing) : undefined,
+      speaking: data.speaking ? parseFloat(data.speaking) : undefined,
+      testType: data.testType,
+      notes: data.notes || undefined,
+    };
+
+    onSubmit(payload);
+  };
+
   if (!record) return null;
 
   return (
     <CustomModal open={open} onClose={onClose}>
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-800">Update Scores</h2>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            {record.studentName} · {record.examType}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <RiArrowUpCircleLine size={18} className="text-blue-500" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-800">
+              Update Scores
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              <span className="font-semibold text-slate-600">
+                {record.studentName}
+              </span>
+              {" · "}
+              {record.examType === "ACADEMIC" ? "Academic" : "General"}
+            </p>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors text-sm"
+          className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
         >
-          ✕
+          <RiCloseLine size={16} />
         </button>
       </div>
 
-      {/* Body */}
-      <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-5">
+      <form
+        onSubmit={handleSubmit(handleFormSubmit)}
+        className="px-6 py-5 space-y-5"
+      >
         {/* Module Scores */}
         <div>
           <label className="text-xs font-semibold text-slate-600 mb-3 block">
@@ -96,11 +126,19 @@ const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
                     />
                   )}
                 />
+
                 <span className="text-[9px] text-slate-300">
                   Target:{" "}
-                  {record.targetScore[
-                    mod.key as keyof typeof record.targetScore
-                  ].toFixed(1)}
+                  {(mod.key === "listening"
+                    ? record.targetL
+                    : mod.key === "reading"
+                      ? record.targetR
+                      : mod.key === "writing"
+                        ? record.targetW
+                        : mod.key === "speaking"
+                          ? record.targetS
+                          : null
+                  )?.toFixed(1) ?? "—"}
                 </span>
               </div>
             ))}
@@ -131,9 +169,9 @@ const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
                 className="w-full"
                 size="middle"
                 options={[
-                  { value: "Mock", label: "Mock Test" },
-                  { value: "Practice", label: "Practice Test" },
-                  { value: "Official", label: "Official Exam" },
+                  { value: "OFFICIAL_EXAM", label: "Official Exam" },
+                  { value: "MOCK_TEST", label: "Mock Test" },
+                  { value: "PRACTICE", label: "Practice Test" },
                 ]}
               />
             )}
@@ -160,9 +198,17 @@ const UpdateScoreModal: React.FC<UpdateScoreModalProps> = ({
           </button>
           <button
             type="submit"
-            className="flex-1 h-10 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
+            disabled={isLoading}
+            className="flex-1 h-10 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Scores
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Spin size="small" />
+                Saving...
+              </span>
+            ) : (
+              "Save Scores"
+            )}
           </button>
         </div>
       </form>

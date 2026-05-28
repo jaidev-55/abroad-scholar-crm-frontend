@@ -3,7 +3,7 @@ import { getBandInfo } from "../Types/Constants";
 
 interface ScoreBadgeProps {
   score: number | null;
-  target?: number;
+  target?: number | null;
   size?: "sm" | "md" | "lg";
   showBand?: boolean;
 }
@@ -15,7 +15,7 @@ const ScoreBadge: React.FC<ScoreBadgeProps> = ({
   showBand = false,
 }) => {
   const band = getBandInfo(score);
-  const met = target !== undefined && score !== null && score >= target;
+  const met = target != null && score !== null && score >= target;
 
   const sizeMap = {
     sm: "text-[11px] px-1.5 py-0.5 min-w-[32px]",
@@ -45,7 +45,13 @@ const ScoreBadge: React.FC<ScoreBadgeProps> = ({
             met ? "text-emerald-500" : "text-orange-400"
           }`}
         >
-          {met ? "✓" : `↑${(target - score).toFixed(1)}`}
+          {target != null && (
+            <span
+              className={`text-[9px] font-semibold ${met ? "text-emerald-500" : "text-orange-400"}`}
+            >
+              {met ? "✓" : `↑${(target - score!).toFixed(1)}`}
+            </span>
+          )}
         </span>
       )}
       {showBand && (

@@ -12,6 +12,7 @@ import {
   RiDashboardLine,
   RiUserUnfollowLine,
   RiLockPasswordLine,
+  RiFileTextLine,
 } from "react-icons/ri";
 import {
   AiOutlineMenu,
@@ -138,13 +139,13 @@ const AdminLayout = () => {
     // },
 
     // ───── STUDENT PROCESS ─────
-    // {
-    //   id: "ielts",
-    //   icon: RiFileTextLine,
-    //   label: "IELTS Tracking",
-    //   href: "/admin/ielts",
-    //   section: "Student Process",
-    // },
+    {
+      id: "ielts",
+      icon: RiFileTextLine,
+      label: "IELTS Tracking",
+      href: "/admin/ielts",
+      section: "Student Process",
+    },
     // {
     //   id: "applications",
     //   icon: RiFileTextLine,

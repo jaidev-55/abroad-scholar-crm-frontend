@@ -2,11 +2,10 @@ import React from "react";
 import { Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { RiEyeLine, RiPencilLine, RiArrowUpLine } from "react-icons/ri";
-import type { IeltsRecord } from "../Types";
-import { daysUntilExam, formatDate, meetsTarget } from "../utils/Helpers";
+import type { IeltsRecord } from "../api/ielts";
+import { daysUntilExam, formatDate } from "../utils/Helpers";
 import IeltsStatusTag from "./Ieltsstatustag";
 import ScoreBadge from "./Scorebadge";
-
 
 interface IeltsTableProps {
   data: IeltsRecord[];
@@ -14,6 +13,7 @@ interface IeltsTableProps {
   onView: (record: IeltsRecord) => void;
   onEdit: (record: IeltsRecord) => void;
   onUpdateScore: (record: IeltsRecord) => void;
+  onDelete?: (record: IeltsRecord) => void;
 }
 
 const IeltsTable: React.FC<IeltsTableProps> = ({
@@ -32,7 +32,7 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       sorter: (a, b) => a.studentName.localeCompare(b.studentName),
       render: (name: string, record) => (
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[9px] font-bold shrink-0 uppercase">
+          <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-[9px] font-bold shrink-0 uppercase">
             {name
               .split(" ")
               .map((w) => w[0])
@@ -54,11 +54,11 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       key: "status",
       width: 110,
       filters: [
-        { text: "Not Started", value: "Not Started" },
-        { text: "Preparing", value: "Preparing" },
-        { text: "Scheduled", value: "Scheduled" },
-        { text: "Completed", value: "Completed" },
-        { text: "Cancelled", value: "Cancelled" },
+        { text: "Not Started", value: "NOT_STARTED" },
+        { text: "Preparing", value: "PREPARING" },
+        { text: "Scheduled", value: "SCHEDULED" },
+        { text: "Completed", value: "COMPLETED" },
+        { text: "Cancelled", value: "CANCELLED" },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status: IeltsRecord["status"]) => (
@@ -73,12 +73,13 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       render: (type: string) => (
         <span
           className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md whitespace-nowrap ${
-            type === "Academic"
+            type === "ACADEMIC"
               ? "bg-violet-50 text-violet-600"
               : "bg-teal-50 text-teal-600"
           }`}
         >
-          {type === "General Training" ? "General" : type}
+          {type === "ACADEMIC" ? "Academic" : "General"}{" "}
+          {/* ✅ API returns uppercase */}
         </span>
       ),
     },
@@ -118,24 +119,25 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "L",
       key: "listening",
       width: 55,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <ScoreBadge
-          score={record.currentScore?.listening ?? null}
-          target={record.targetScore.listening}
+          score={record.currentL ?? null}
+          target={record.targetL ?? null}
           size="sm"
         />
+        // ✅ was: record.currentScore?.listening / record.targetScore.listening
       ),
     },
     {
       title: "R",
       key: "reading",
       width: 55,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <ScoreBadge
-          score={record.currentScore?.reading ?? null}
-          target={record.targetScore.reading}
+          score={record.currentR ?? null}
+          target={record.targetR ?? null}
           size="sm"
         />
       ),
@@ -144,11 +146,11 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "W",
       key: "writing",
       width: 55,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <ScoreBadge
-          score={record.currentScore?.writing ?? null}
-          target={record.targetScore.writing}
+          score={record.currentW ?? null}
+          target={record.targetW ?? null}
           size="sm"
         />
       ),
@@ -157,11 +159,11 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "S",
       key: "speaking",
       width: 55,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <ScoreBadge
-          score={record.currentScore?.speaking ?? null}
-          target={record.targetScore.speaking}
+          score={record.currentS ?? null}
+          target={record.targetS ?? null}
           size="sm"
         />
       ),
@@ -170,13 +172,12 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "Overall",
       key: "overall",
       width: 80,
-      align: "center" as const,
-      sorter: (a, b) =>
-        (a.currentScore?.overall ?? 0) - (b.currentScore?.overall ?? 0),
+      align: "center",
+      sorter: (a, b) => (a.currentOA ?? 0) - (b.currentOA ?? 0),
       render: (_: unknown, record: IeltsRecord) => (
         <ScoreBadge
-          score={record.currentScore?.overall ?? null}
-          target={record.targetScore.overall}
+          score={record.currentOA ?? null}
+          target={record.targetOA ?? null}
           size="md"
           showBand
         />
@@ -186,10 +187,11 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "Target",
       key: "target",
       width: 55,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <span className="text-[12px] font-bold text-slate-500">
-          {record.targetScore.overall.toFixed(1)}
+          {record.requiredScore?.toFixed(1) ?? "—"}{" "}
+          {/* ✅ was: targetScore.overall */}
         </span>
       ),
     },
@@ -197,11 +199,14 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "Gap",
       key: "gap",
       width: 60,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => {
-        const met = meetsTarget(record.currentScore, record.targetScore);
-        if (!record.currentScore)
+        if (!record.currentOA)
           return <span className="text-[10px] text-slate-300">—</span>;
+        const met =
+          record.requiredScore !== null &&
+          record.currentOA !== null &&
+          record.currentOA >= (record.requiredScore ?? 0);
         return met ? (
           <span className="inline-flex items-center text-[9px] font-semibold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
             ✓ Met
@@ -215,15 +220,19 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
     },
     {
       title: "Counselor",
-      dataIndex: "counselor",
       key: "counselor",
       width: 100,
-      render: (name: string) => (
+      render: (
+        _: unknown,
+        record: IeltsRecord, // ✅ was: dataIndex counselor (flat string)
+      ) => (
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase shrink-0">
-            {name?.[0]}
+            {record.counselor?.name?.[0] ?? "?"}
           </div>
-          <span className="text-[11px] text-slate-600 truncate">{name}</span>
+          <span className="text-[11px] text-slate-600 truncate">
+            {record.counselor?.name ?? "Unassigned"}
+          </span>
         </div>
       ),
     },
@@ -232,7 +241,7 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       dataIndex: "attempts",
       key: "attempts",
       width: 45,
-      align: "center" as const,
+      align: "center",
       render: (val: number) => (
         <span className="text-[12px] font-medium text-slate-600">{val}</span>
       ),
@@ -241,7 +250,7 @@ const IeltsTable: React.FC<IeltsTableProps> = ({
       title: "Actions",
       key: "actions",
       width: 90,
-      align: "center" as const,
+      align: "center",
       render: (_: unknown, record: IeltsRecord) => (
         <div className="flex items-center justify-center gap-0">
           <Tooltip title="View">
