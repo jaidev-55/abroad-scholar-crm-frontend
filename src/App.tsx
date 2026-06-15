@@ -1,7 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./pages/layouts/AdminLayout";
-import EnrolledStudentsPage from "./pages/enrolled/page";
-
 import CounselorsPage from "./pages/counselors/page";
 import AllFollowupsPage from "./pages/folllow-ups/page";
 import LeadSourcePage from "./pages/lead-source/page";
@@ -10,8 +8,6 @@ import LoginPage from "./pages/auth/Login";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import PerformancePage from "./pages/performance/page";
-import ApplicationPage from "./pages/application/page";
-import VisaProcessingPage from "./pages/visaprocess/page";
 import LeadsPipelinePage from "./modules/leadsPipeline/page/LeadsPipelinePage";
 import AllLeadsPage from "./modules/all-leads/pages/AllLeadsPage";
 import UsersPage from "./modules/users/pages/UsersPage";
@@ -27,6 +23,7 @@ import SyncLogPage from "./modules/marketing/sync-log/pages/Synclogpage";
 import SystemSettingsPage from "./modules/settings/pages/Systemsettingspage";
 import IeltsPage from "./modules/ielts/pages/Ieltspage";
 import LostLeadsPage from "./modules/lost-leads/page";
+import EnrolledStudentsPage from "./modules/enrolled/pages/EnrolledStudentsPage";
 
 const App = () => {
   return (
@@ -42,8 +39,6 @@ const App = () => {
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="performance" element={<PerformancePage />} />
-          <Route path="applications" element={<ApplicationPage />} />
-          <Route path="visa" element={<VisaProcessingPage />} />
           <Route path="leads-pipeline" element={<LeadsPipelinePage />} />
           <Route path="all-leads" element={<AllLeadsPage />} />
           <Route path="my-profile" element={<ProfilePage />} />

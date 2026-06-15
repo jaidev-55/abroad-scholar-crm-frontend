@@ -70,7 +70,7 @@ const CustomSelect = <T extends FieldValues>({
                   field.value !== undefined
                     ? field.value
                     : undefined
-                } //
+                }
                 placeholder={placeholder}
                 className="w-full"
                 size={size}

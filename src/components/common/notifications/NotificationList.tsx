@@ -45,7 +45,18 @@ const NotificationList: React.FC<NotificationListProps> = ({
   return (
     <>
       {notifications.map((n, i) => {
-        const c = TYPE_CFG[n.type];
+        const c = (
+          TYPE_CFG as Record<string, (typeof TYPE_CFG)[keyof typeof TYPE_CFG]>
+        )[n.type] ?? {
+          icon: RiSparklingLine,
+          bg: "bg-slate-50",
+          color: "text-slate-600",
+          dot: "bg-slate-400",
+          border: "border-slate-200",
+          bar: "#94a3b8",
+          pill: "bg-slate-50 text-slate-600",
+          label: "Notification",
+        };
         const Icon = c.icon;
         return (
           <motion.button

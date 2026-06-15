@@ -189,7 +189,6 @@ const NotificationBell: React.FC = () => {
     });
 
     socket.on("notification:new", (notif: Notif) => {
-      // Use refs — always current values without causing reconnects
       if (
         readIdsRef.current.has(notif.id) ||
         clearedIdsRef.current.has(notif.id)
@@ -205,12 +204,12 @@ const NotificationBell: React.FC = () => {
       if (soundOnRef.current) chime();
       broadcastRef.current?.postMessage(notif);
 
-      // Always show browser notification — visible on any tab/window
       if (
         typeof Notification !== "undefined" &&
         Notification.permission === "granted"
       ) {
-        const bn = new Notification(TYPE_CFG[notif.type].label, {
+        const cfg = (TYPE_CFG as Record<string, { label: string }>)[notif.type];
+        const bn = new Notification(cfg?.label ?? "Notification", {
           body: `${notif.title}\n${notif.subtitle}`,
           icon: "/favicon.ico",
           tag: notif.id,
@@ -219,13 +218,16 @@ const NotificationBell: React.FC = () => {
         bn.onclick = () => {
           window.focus();
           bn.close();
-          navigate(
-            `/admin/leads-pipeline${notif.leadId ? `?leadId=${notif.leadId}` : ""}`,
-          );
+          if (notif.studentId) {
+            navigate(`/admin/enrolled?studentId=${notif.studentId}`);
+          } else {
+            navigate(
+              `/admin/leads-pipeline${notif.leadId ? `?leadId=${notif.leadId}` : ""}`,
+            );
+          }
         };
       }
 
-      // Always update tab title
       document.title = `(1) New — Abroad Scholars CRM`;
     });
 
@@ -237,7 +239,7 @@ const NotificationBell: React.FC = () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [refetch, navigate]); // ← only stable deps — socket connects once and stays
+  }, [refetch, navigate]);
 
   // ── Cross-tab notifications via BroadcastChannel ─────────────────────────
   // Uses refs to avoid recreating channel on state change
@@ -301,7 +303,8 @@ const NotificationBell: React.FC = () => {
       Notification.permission === "granted"
     ) {
       brandNew.slice(0, 2).forEach((n) => {
-        const bn = new Notification(TYPE_CFG[n.type].label, {
+        const cfg = (TYPE_CFG as Record<string, { label: string }>)[n.type];
+        const bn = new Notification(cfg?.label ?? "Notification", {
           body: `${n.title}\n${n.subtitle}`,
           icon: "/favicon.ico",
           tag: n.id,
@@ -310,9 +313,13 @@ const NotificationBell: React.FC = () => {
         bn.onclick = () => {
           window.focus();
           bn.close();
-          navigate(
-            `/admin/leads-pipeline${n.leadId ? `?leadId=${n.leadId}` : ""}`,
-          );
+          if (n.studentId) {
+            navigate(`/admin/enrolled?studentId=${n.studentId}`);
+          } else {
+            navigate(
+              `/admin/leads-pipeline${n.leadId ? `?leadId=${n.leadId}` : ""}`,
+            );
+          }
         };
       });
     }
@@ -365,7 +372,11 @@ const NotificationBell: React.FC = () => {
   const goToLead = (n: Notif) => {
     setReadIds((p) => new Set([...p, n.id]));
     setOpen(false);
-    navigate(`/admin/leads-pipeline${n.leadId ? `?leadId=${n.leadId}` : ""}`);
+    if (n.studentId) {
+      navigate(`/admin/enrolled?studentId=${n.studentId}`);
+    } else {
+      navigate(`/admin/leads-pipeline${n.leadId ? `?leadId=${n.leadId}` : ""}`);
+    }
   };
 
   const handleBellClick = () => {

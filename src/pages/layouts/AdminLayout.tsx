@@ -13,6 +13,7 @@ import {
   RiUserUnfollowLine,
   RiLockPasswordLine,
   RiFileTextLine,
+  RiGraduationCapLine,
 } from "react-icons/ri";
 import {
   AiOutlineMenu,
@@ -146,27 +147,14 @@ const AdminLayout = () => {
       href: "/admin/ielts",
       section: "Student Process",
     },
-    // {
-    //   id: "applications",
-    //   icon: RiFileTextLine,
-    //   label: "Applications",
-    //   href: "/admin/applications",
-    //   section: "Student Process",
-    // },
-    // {
-    //   id: "visa",
-    //   icon: RiVisaLine,
-    //   label: "Visa Processing",
-    //   href: "/admin/visa",
-    //   section: "Student Process",
-    // },
-    // {
-    //   id: "enrolled",
-    //   icon: RiGraduationCapLine,
-    //   label: "Enrolled Students",
-    //   href: "/admin/enrolled",
-    //   section: "Student Process",
-    // },
+
+    {
+      id: "enrolled",
+      icon: RiGraduationCapLine,
+      label: "Enrolled Students",
+      href: "/admin/enrolled",
+      section: "Student Process",
+    },
 
     // ───── MARKETING ─────
     {

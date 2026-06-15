@@ -1,10 +1,11 @@
 export interface Notif {
   id: string;
-  type: "followup" | "new_lead" | "overdue" | "hot";
+  type: string;
   title: string;
   subtitle: string;
   time: string;
-  read: boolean;
-  leadId?: string;
   priority: "high" | "medium" | "low";
+  leadId?: string;
+  studentId?: string;
+  read: boolean;
 }
