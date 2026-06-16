@@ -21,7 +21,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 30m
-          conn_timeout: 60s
           script: |
             cd /home/deployer/abroad-scholar-frontend
             git pull origin main
