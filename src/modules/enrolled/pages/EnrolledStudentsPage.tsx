@@ -349,6 +349,10 @@ const EnrolledStudentsPage: React.FC = () => {
             onSubmit={(leadId, payload) =>
               handleEnrollSubmit({ leadId, payload })
             }
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["enrolled-list"] });
+              queryClient.invalidateQueries({ queryKey: ["enrolled-stats"] });
+            }}
           />
         )}
 

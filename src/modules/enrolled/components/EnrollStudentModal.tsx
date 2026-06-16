@@ -49,6 +49,7 @@ interface EnrollStudentModalProps {
   onClose: () => void;
   isLoading: boolean;
   counselorOptions: SelectOption[];
+  onSuccess?: () => void;
   onSubmit: (
     leadId: string,
     payload: Partial<CreateEnrolledStudentPayload>,
@@ -181,6 +182,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
   record,
   onClose,
   isLoading,
+  onSuccess,
   counselorOptions,
   onSubmit,
 }) => {
@@ -311,6 +313,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
           };
           await updateEnrolledStudent(record.id, payload);
           message.success("Student updated successfully!");
+          onSuccess?.();
           handleClose();
         } else if (data.leadId) {
           const payload: Partial<CreateEnrolledStudentPayload> = {
@@ -351,6 +354,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
           };
           await createEnrolledStudent(payload);
           message.success("Student enrolled successfully!");
+          onSuccess?.();
           handleClose();
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
