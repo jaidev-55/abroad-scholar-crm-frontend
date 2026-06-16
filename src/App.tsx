@@ -52,7 +52,6 @@ const App = () => {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="users" element={<UsersPage />} />
 
-          {/* ───── Marketing Routes ───── */}
           <Route path="marketing/spend-roi" element={<SpendRoiPage />} />
           <Route
             path="marketing/lead-attribution"
