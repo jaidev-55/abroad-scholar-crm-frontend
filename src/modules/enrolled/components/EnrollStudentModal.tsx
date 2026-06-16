@@ -369,7 +369,7 @@ const EnrollStudentModal: React.FC<EnrollStudentModalProps> = ({
         setIsSubmitting(false);
       }
     },
-    [isEdit, record, onSubmit, handleClose],
+    [isEdit, record, onSubmit, onSuccess, handleClose],
   );
 
   const busy = isSubmitting || isLoading;

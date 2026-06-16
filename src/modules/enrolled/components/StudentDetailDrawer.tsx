@@ -27,6 +27,7 @@ import VisaSection from "./VisaSection";
 import DocumentSection from "./DocumentSection";
 import PreDepartureChecklist from "./PreDepartureChecklist";
 import CommissionSection from "./CommissionSection";
+import { getIsAdmin } from "../../../utils/getStoredUser";
 
 interface StudentDetailDrawerProps {
   open: boolean;
@@ -42,6 +43,8 @@ const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({
   onStudentUpdated,
 }) => {
   const queryClient = useQueryClient();
+
+  const isAdmin = getIsAdmin();
 
   const [detail, setDetail] = useState<EnrolledStudent | null>(null);
   const detailLoading =
@@ -186,23 +189,27 @@ const StudentDetailDrawer: React.FC<StudentDetailDrawerProps> = ({
         </div>
       ),
     },
-    {
-      key: "commission",
-      label: (
-        <span className="flex items-center gap-1.5">
-          <RiHandCoinLine size={13} /> Commission
-        </span>
-      ),
-      children: (
-        <div className="p-4">
-          <CommissionSection
-            studentId={detail?.id ?? ""}
-            commission={detail?.commission ?? null}
-            onRefresh={handleRefresh}
-          />
-        </div>
-      ),
-    },
+    ...(isAdmin
+      ? [
+          {
+            key: "commission",
+            label: (
+              <span className="flex items-center gap-1.5">
+                <RiHandCoinLine size={13} /> Commission
+              </span>
+            ),
+            children: (
+              <div className="p-4">
+                <CommissionSection
+                  studentId={detail?.id ?? ""}
+                  commission={detail?.commission ?? null}
+                  onRefresh={handleRefresh}
+                />
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
